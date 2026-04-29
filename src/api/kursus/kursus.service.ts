@@ -19,18 +19,14 @@ export async function insertRequestKursus(body: InsertRequestKursusBodyDTO) {
     return await model.insertRequestKursus(body);
 }
 
-export async function getPendingRequestKursus(id_relawan: number) {
-    return await model.getPendingRequestKursus(id_relawan);
-}
-
-export async function getAccRequestKursus(id_relawan: number) {
-    return await model.getAccRequestKursus(id_relawan);
-}
-
-export async function getDeclineRequestKursus(id_relawan: number) {
-    return await model.getDeclineRequestKursus(id_relawan);
+export async function getRequestKursus(id_relawan: number, keterangan: string) {
+    return await model.getRequestKursus(id_relawan, keterangan);
 }
 
 export async function getFilterKursus(filters: GetFilterKursusQueryDTO) {
     return await model.getFilterKursus(filters);
+}
+
+export async function updateRequestKursus(id_detail_kursus: number) {
+    return await model.updateRequestKursus(id_detail_kursus);
 }

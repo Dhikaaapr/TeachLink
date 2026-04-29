@@ -2,7 +2,9 @@ import * as service from "./kursus.service";
 import { formatResponse } from "../../utils/formatResponse"
 import { insertKursusBodyDTO } from "./kursus.schema";
 import { InsertRequestKursusBodyDTO } from "./kursus.schema";
+import { GetRequestKursusQueryDTO } from "./kursus.schema";
 import { GetFilterKursusQueryDTO } from "./kursus.schema";
+import { UpdateRequestKursusParamsDTO } from "./kursus.schema";
 
 export async function insertKursus(ctx: any){
     const body = ctx.body as insertKursusBodyDTO;
@@ -31,39 +33,10 @@ export async function insertRequestKursus(ctx: any){
 }
 
 
-export async function getPendingRequestKursus(ctx: any) {
-    const id_relawan = Number(ctx.store?.user?.user_id);
+export async function getRequestKursus(ctx: any) {
+   const { id_relawan, keterangan } = ctx.query as GetRequestKursusQueryDTO;
 
-    if (!id_relawan) {
-        ctx.set.status = 401;
-        throw new Error("UNAUTHORIZED: User not found in request context");
-    }
-
-    const result = await service.getPendingRequestKursus(id_relawan);
-
-    return formatResponse(ctx, result);
-}
-
-export async function getAccRequestKursus(ctx: any) {
-    const id_relawan = Number(ctx.store?.user?.user_id);
-
-    if (!id_relawan) {
-        ctx.set.status = 401;
-        throw new Error("UNAUTHORIZED: User not found in request context");
-    }
-    const result = await service.getAccRequestKursus(id_relawan);
-
-    return formatResponse(ctx, result);
-}
-
-export async function getDeclineRequestKursus(ctx: any) {
-    const id_relawan = Number(ctx.store?.user?.user_id);
-
-    if (!id_relawan) {
-        ctx.set.status = 401;
-        throw new Error("UNAUTHORIZED: User not found in request context");
-    }
-    const result = await service.getDeclineRequestKursus(id_relawan);
+    const result = await service.getRequestKursus(id_relawan, keterangan);
 
     return formatResponse(ctx, result);
 }
@@ -73,5 +46,11 @@ export async function getFilterKursus(ctx: any){
     
     const result = await service.getFilterKursus(query);
     
+    return formatResponse(ctx, result);
+}
+
+export async function updateRequestKursus(ctx: any) {
+    const { id_detail_kursus } = ctx.params as UpdateRequestKursusParamsDTO;
+    const result = await service.updateRequestKursus(id_detail_kursus);
     return formatResponse(ctx, result);
 }

@@ -1,7 +1,7 @@
 import { queryDB } from "../../utils/queryDB";
-import { formatResult } from '../../utils/formatResult';
+import { formatResult } from "../../utils/formatResult";
 
-export async function insertKursus (data: any) {
+export async function insertKursus(data: any) {
   const {
     id_relawan,
     tanggal_mengajar,
@@ -103,11 +103,8 @@ export async function getKursusByRelawan(id_relawan: number) {
   return formatResult(rows, "getAll");
 }
 
-export async function insertRequestKursus (data: any) {
-  const {
-    id_siswa,
-    id_kursus
-  } = data;
+export async function insertRequestKursus(data: any) {
+  const { id_siswa, id_kursus } = data;
 
   const sql = `
     INSERT INTO detail_kursus (
@@ -121,17 +118,14 @@ export async function insertRequestKursus (data: any) {
       id_siswa
   `;
 
-  const rows = await queryDB(sql, [
-    id_siswa,
-    id_kursus
-  ]);
+  const rows = await queryDB(sql, [id_siswa, id_kursus]);
 
   return formatResult(rows, "create");
 }
 
-export async function getPendingRequestKursus(id_relawan: number) {
-  const sql = `
-    SELECT 
+export async function getRequestKursus(id_relawan: number, keterangan: string) {
+  let sql = `
+    SELECT  
       dk.id_detail_kursus,
       dk.keterangan,
       p.full_name,
@@ -157,95 +151,30 @@ export async function getPendingRequestKursus(id_relawan: number) {
     INNER JOIN pelajaran pl 
       ON k.id_pelajaran = pl.id_pelajaran
     WHERE k.id_relawan = $1
-      AND dk.keterangan = 'PENDING'
-    ORDER BY k.tanggal_mengajar ASC
   `;
 
-  const rows = await queryDB(sql, [id_relawan]);
+  const params: any[] = [id_relawan];
 
-  return formatResult(rows, "getAll");
-}
+  // Tambahin filter kalau bukan "All"
+  if (keterangan !== "ALL") {
+    sql += ` AND dk.keterangan = $2`;
+    params.push(keterangan);
+  }
 
-export async function getAccRequestKursus(id_relawan: number) {
-  const sql = `
-    SELECT 
-      dk.id_detail_kursus,
-      dk.keterangan,
-      p.full_name,
-      p.tanggal_lahir,
-      DATE_PART('year', AGE(p.tanggal_lahir)) AS usia,
-      k.tanggal_mengajar,
-      k.waktu_mulai,
-      k.waktu_selesai,
-      k.mode,
-      k.url_gmeet,
-      pr.nama_provinsi,
-      kb.nama_kabupaten,
-      pl.nama_pelajaran
-    FROM detail_kursus dk
-    INNER JOIN pengguna p 
-      ON dk.id_siswa = p.user_id
-    INNER JOIN kursus k 
-      ON dk.id_kursus = k.id_kursus
-    INNER JOIN provinsi pr 
-      ON p.id_provinsi = pr.id_provinsi
-    INNER JOIN kabupaten kb 
-      ON p.id_kabupaten = kb.id_kabupaten
-    INNER JOIN pelajaran pl 
-      ON k.id_pelajaran = pl.id_pelajaran
-    WHERE k.id_relawan = $1
-      AND dk.keterangan = 'ACC'
-    ORDER BY k.tanggal_mengajar ASC
-  `;
+  sql += ` ORDER BY k.tanggal_mengajar ASC`;  
 
-  const rows = await queryDB(sql, [id_relawan]);
-
-  return formatResult(rows, "getAll");
-}
-
-export async function getDeclineRequestKursus(id_relawan: number) {
-  const sql = `
-    SELECT 
-      dk.id_detail_kursus,
-      dk.keterangan,
-      p.full_name,
-      p.tanggal_lahir,
-      DATE_PART('year', AGE(p.tanggal_lahir)) AS usia,
-      k.tanggal_mengajar,
-      k.waktu_mulai,
-      k.waktu_selesai,
-      k.mode,
-      k.url_gmeet,
-      pr.nama_provinsi,
-      kb.nama_kabupaten,
-      pl.nama_pelajaran
-    FROM detail_kursus dk
-    INNER JOIN pengguna p 
-      ON dk.id_siswa = p.user_id
-    INNER JOIN kursus k 
-      ON dk.id_kursus = k.id_kursus
-    INNER JOIN provinsi pr 
-      ON p.id_provinsi = pr.id_provinsi
-    INNER JOIN kabupaten kb 
-      ON p.id_kabupaten = kb.id_kabupaten
-    INNER JOIN pelajaran pl 
-      ON k.id_pelajaran = pl.id_pelajaran
-    WHERE k.id_relawan = $1
-      AND dk.keterangan = 'DECLINE'
-    ORDER BY k.tanggal_mengajar ASC
-  `;
-
-  const rows = await queryDB(sql, [id_relawan]);
+  const rows = await queryDB(sql, params);
 
   return formatResult(rows, "getAll");
 }
 
 export async function getFilterKursus(filters: {
-    id_pelajaran?: number;
-    id_provinsi?: number;
-    mode?: 'online' | 'offline';
+  nama_pelajaran?: string;
+  id_provinsi?: number;
+  id_kabupaten?: number;
+  mode?: "online" | "offline" | "all";
 }) {
-    let sql = `
+  let sql = `
         SELECT 
           kursus.id_kursus,
           pengguna.full_name,
@@ -269,34 +198,43 @@ export async function getFilterKursus(filters: {
             ON kursus.id_pelajaran = pelajaran.id_pelajaran
         WHERE 1=1
     `;
-    
-    const values: any[] = [];
-    let idx = 1;
-    
-    if (filters.id_pelajaran) {
-        sql += ` AND kursus.id_pelajaran = $${idx}`;
-        values.push(filters.id_pelajaran);
-        idx++;
+
+  const values: any[] = [];
+  let idx = 1;
+
+  if (filters.nama_pelajaran) {
+    sql += ` AND pelajaran.nama_pelajaran ILIKE $${idx}`;
+    values.push(`%${filters.nama_pelajaran}%`);
+    idx++;
+  }
+
+  if (filters.id_provinsi) {
+    sql += ` AND pengguna.id_provinsi = $${idx}`;
+    values.push(filters.id_provinsi);
+    idx++;
+  }
+
+  if (filters.id_kabupaten) {
+    sql += ` AND pengguna.id_kabupaten = $${idx}`;
+    values.push(filters.id_kabupaten);
+    idx++;
+  }
+
+  if (filters.mode) {
+    if (filters.mode === "all") {
+      // Do nothing, include all modes
+    } else {
+      sql += ` AND kursus.mode = $${idx}`;
+      values.push(filters.mode);
+      idx++;
     }
-    
-    if (filters.id_provinsi) {
-        sql += ` AND pengguna.id_provinsi = $${idx}`;
-        values.push(filters.id_provinsi);
-        idx++;
-    }
-    
-    if (filters.mode) {
-        sql += ` AND kursus.mode = $${idx}`;
-        values.push(filters.mode);
-        idx++;
-    }
-    
-    sql += ` AND kursus.tanggal_mengajar >= CURRENT_DATE`;
-    
-    sql += ` ORDER BY kursus.tanggal_mengajar ASC, kursus.waktu_mulai ASC`;
-    
-    const rows = await queryDB(sql, values);
-    
-    return formatResult(rows, "getAll");
+  }
+
+  sql += ` AND kursus.tanggal_mengajar >= CURRENT_DATE`;
+
+  sql += ` ORDER BY kursus.tanggal_mengajar ASC, kursus.waktu_mulai ASC`;
+
+  const rows = await queryDB(sql, values);
+
+  return formatResult(rows, "getAll");
 }
-    

@@ -27,31 +27,33 @@ export const insertRequestKursusBody = t.Object({
 
 export type InsertRequestKursusBodyDTO = typeof insertRequestKursusBody.static;
 
-export const getPendingRequestKursusParams = t.Object({
+export const getRequestKursusQuery = t.Object({
     id_relawan: t.Number({ min: 1 }),
+    keterangan: t.Union([
+        t.Literal("PENDING"),
+        t.Literal("ACC"),
+        t.Literal("DECLINE"),
+        t.Literal("ALL")
+    ])
 });
 
-export type GetPendingRequestKursusParamsDTO = typeof getPendingRequestKursusParams.static;
-
-export const getAccRequestKursusParams = t.Object({
-    id_relawan: t.Number({ min: 1 }),
-});
-
-export type GetAccRequestKursusParamsDTO = typeof getAccRequestKursusParams.static;
-
-export const getDeclineRequestKursusParams = t.Object({
-    id_relawan: t.Number({ min: 1 }),
-});
-
-export type GetDeclineRequestKursusParamsDTO = typeof getDeclineRequestKursusParams.static;
+export type GetRequestKursusQueryDTO = typeof getRequestKursusQuery.static;
 
 export const getFilterKursusQuery = t.Object({
-  id_pelajaran: t.Optional(t.Number({ min: 1 })),
+  nama_pelajaran: t.Optional(t.String()),
   id_provinsi: t.Optional(t.Number({ min: 1 })),
-  mode: t.Optional(t.Union([
+  id_kabupaten: t.Optional(t.Number({ min: 1 })),
+  mode: t.Union([
     t.Literal("online"),
-    t.Literal("offline")
-  ]))
+    t.Literal("offline"),
+    t.Literal("all")
+  ])
 });
 
 export type GetFilterKursusQueryDTO = typeof getFilterKursusQuery.static;
+
+export const updateRequestKursusParams = t.Object({
+    id_detail_kursus: t.Number({ min: 1 }),
+});
+
+export type UpdateRequestKursusParamsDTO = typeof updateRequestKursusParams.static;
