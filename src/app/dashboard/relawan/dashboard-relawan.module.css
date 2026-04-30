@@ -95,8 +95,8 @@
 .mOff  { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-full); background: var(--amber-light); color: var(--amber); }
 .mBoth { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-full); background: var(--blue-light); color: var(--blue); }
 
-/* Stats */
-.statsGrid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
+/* Stats — 3 kolom (total jam dihapus) */
+.statsGrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
 .sc {
   background: var(--white); border-radius: var(--r-lg); padding: 12px;
   display: flex; align-items: center; gap: 10px; border: 0.5px solid var(--gray-200);
@@ -201,7 +201,8 @@
 .certSeal { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.2); border: 2px solid rgba(255,255,255,.5); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .certBody { padding: 14px 18px; }
 .certMapel { font-size: 14px; font-weight: 700; color: var(--gray-900); margin: 0 0 8px; }
-.certStats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+/* 2 kolom (jam mengajar dihapus) */
+.certStats { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 12px; }
 .certStat  { text-align: center; padding: 8px; background: var(--gray-100); border-radius: 8px; }
 .csv { font-size: 16px; font-weight: 700; color: var(--gray-900); margin: 0 0 2px; }
 .csl { font-size: 10px; color: var(--gray-400); margin: 0; }

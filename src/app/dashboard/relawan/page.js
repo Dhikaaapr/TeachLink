@@ -39,8 +39,8 @@ const SISWA_DATA = [
 ];
 
 const CERT_DATA = [
-  { mapel:'Matematika', level:'SMA', jam:96, siswa:8, rating:4.9, status:'done',     periode:'Apr–Okt 2025', from:'#D85A30', to:'#F0997B' },
-  { mapel:'Fisika',     level:'SMA', jam:24, siswa:4, rating:4.8, status:'progress', bulan:2, total:6, mulai:'Feb 2026', target:'Agt 2026', from:'#1D9E75', to:'#5DCAA5' },
+  { mapel:'Matematika', level:'SMA', siswa:8, rating:4.9, status:'done',     periode:'Apr–Okt 2025', from:'#D85A30', to:'#F0997B' },
+  { mapel:'Fisika',     level:'SMA', siswa:4, rating:4.8, status:'progress', bulan:2, total:6, mulai:'Feb 2026', target:'Agt 2026', from:'#1D9E75', to:'#5DCAA5' },
 ];
 
 const INIT_REQUESTS = [
@@ -93,7 +93,7 @@ export default function DashboardRelawan() {
 
   // Pengaturan relawan
   const [isOnline, setIsOnline]     = useState(true);
-  const [relMode, setRelMode]       = useState('online');    // 'online'|'offline'|'both'
+  const [relMode, setRelMode]       = useState('online');
   const [relKota, setRelKota]       = useState('Jakarta Selatan');
   const [mapelActive, setMapelActive] = useState(['Matematika','Fisika']);
 
@@ -101,7 +101,7 @@ export default function DashboardRelawan() {
   const [curMonth, setCurMonth] = useState(3);
 
   // Toast
-  const [toast, setToast]     = useState('');
+  const [toast, setToast]         = useState('');
   const [toastShow, setToastShow] = useState(false);
   const [settToast, setSettToast] = useState('');
   const [settToastShow, setSettToastShow] = useState(false);
@@ -205,9 +205,8 @@ export default function DashboardRelawan() {
               </div>
             </header>
             <div className={styles.statsGrid}>
-              <StatCard icon="clock" color="coral" value="120"          label="Total Jam"     />
-              <StatCard icon="users" color="teal"  value="12"           label="Siswa Aktif"   />
-              <StatCard icon="star"  color="amber" value="4.9"          label="Rating"        />
+              <StatCard icon="users" color="teal"  value="12"            label="Siswa Aktif"   />
+              <StatCard icon="star"  color="amber" value="4.9"           label="Rating"        />
               <StatCard icon="chat"  color="blue"  value={requests.length} label="Request Masuk" />
             </div>
             <div className={styles.grid2}>
@@ -374,7 +373,6 @@ export default function DashboardRelawan() {
                   <div className={styles.certBody}>
                     <p className={styles.certMapel}>{c.mapel} — {c.level}</p>
                     <div className={styles.certStats}>
-                      <div className={styles.certStat}><p className={styles.csv}>{c.jam}</p><p className={styles.csl}>Jam Mengajar</p></div>
                       <div className={styles.certStat}><p className={styles.csv}>{c.siswa}</p><p className={styles.csl}>Siswa Dibantu</p></div>
                       <div className={styles.certStat}><p className={styles.csv}>{c.rating}</p><p className={styles.csl}>Rating</p></div>
                     </div>
@@ -438,8 +436,8 @@ export default function DashboardRelawan() {
                 </div>
                 <div className={styles.modeBtns}>
                   {[
-                    { v:'online',  l:'Online',          cls:styles.mbOn   },
-                    { v:'offline', l:'Offline',         cls:styles.mbOff  },
+                    { v:'online',  l:'Online',           cls:styles.mbOn   },
+                    { v:'offline', l:'Offline',          cls:styles.mbOff  },
                     { v:'both',    l:'Online & Offline', cls:styles.mbBoth },
                   ].map(m => (
                     <button key={m.v} className={`${styles.mb} ${relMode===m.v ? m.cls : ''}`} onClick={() => setRelMode(m.v)}>{m.l}</button>
@@ -511,7 +509,6 @@ function StatCard({ icon, color, value, label }) {
   );
 }
 function StatIcon({ type }) {
-  if (type==='clock') return <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M17.5 10a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" stroke="currentColor" strokeWidth="1.5"/><path d="M10 5.833V10l3.333 1.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   if (type==='users') return <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M3 17.5c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   if (type==='star')  return <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M10 2l2.5 5.3L18 8l-4 3.9.9 5.3L10 14.5 5.1 17.2l.9-5.3-4-3.9 5.5-.7L10 2z" stroke="currentColor" strokeWidth="1.5"/></svg>;
   if (type==='chat')  return <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M17.5 12.5a1.667 1.667 0 01-1.667 1.667h-10L2.5 17.5V5.833A1.667 1.667 0 014.167 4.167h11.666A1.667 1.667 0 0117.5 5.833V12.5z" stroke="currentColor" strokeWidth="1.5"/></svg>;
