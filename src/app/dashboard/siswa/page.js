@@ -513,4 +513,4 @@ function NavIcon({id}) {
   if(id==="progress")  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2.5 15l4.167-5.833L10 12.5l3.333-5L17.5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
   if(id==="settings")  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   return null;
-}
+}     
