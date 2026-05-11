@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../register.module.css";
+import { apiRequest } from "../../../utils/api";
 
 const subjects = [
   "Matematika", "Bahasa Indonesia", "Bahasa Inggris", "Fisika",
@@ -13,6 +14,8 @@ export default function RegisterSiswa() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPass: "",
     age: "", phone: "", city: "", school: "",
@@ -30,13 +33,40 @@ export default function RegisterSiswa() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.password !== form.confirmPass) {
+      setError("Password tidak cocok");
+      return;
+    }
+    
     setLoading(true);
-    setTimeout(() => {
+    setError("");
+
+    try {
+      await apiRequest("/auth/register", {
+        method: "POST",
+        body: {
+          full_name: form.name,
+          email: form.email,
+          password: form.password,
+          id_role: 2, // 2 for Siswa
+          nomor_telepon: form.phone,
+          institusi: form.school,
+          bio: form.goals,
+          // age is not in schema, so we skip it or map it if needed
+        },
+      });
+
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-      router.push("/dashboard/siswa");
-    }, 1500);
+    }
   };
 
   return (

@@ -8,7 +8,6 @@ export const provinsiRoutes = new Elysia({
 })
 
     .get("/all", controller.getAllProvinsi, {
-        beforeHandle: [authenticate()],
         response: { 200: defaultResponse() },
         detail: {
             tags: ["Provinsi"],

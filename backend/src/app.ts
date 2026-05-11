@@ -79,12 +79,13 @@ app.use(securityHeaders);
 // Allowed origins untuk CORS
 const allowedOrigins = [
     "http://localhost:5173",
-    "http://localhost:3005"
+    "http://localhost:3005",
+    "http://localhost:3000"
 ];
 
 app.use(
     cors({
-        origin: (request) => {
+        origin: (request: any) => {
             const origin = request.headers.get("origin");
 
             // Izinkan request tanpa origin (Postman, server-to-server, dll)

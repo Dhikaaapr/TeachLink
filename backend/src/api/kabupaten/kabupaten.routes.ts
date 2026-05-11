@@ -9,7 +9,6 @@ export const kabupatenRoutes = new Elysia({
 })
 
     .get("/provinsi/:id_provinsi", controller.getAllKabupatenById,{
-        beforeHandle: [authenticate()],
         response: { 200: defaultResponse() },
         params: getAllKabupatenParams,
         detail: {
