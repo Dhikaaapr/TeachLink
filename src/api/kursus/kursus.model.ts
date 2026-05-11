@@ -1,3 +1,4 @@
+import { updateRequestKursusParams } from './kursus.schema';
 import { queryDB } from "../../utils/queryDB";
 import { formatResult } from "../../utils/formatResult";
 
@@ -102,7 +103,7 @@ export async function getKursusByRelawan(id_relawan: number) {
 
   return formatResult(rows, "getAll");
 }
-
+  
 export async function insertRequestKursus(data: any) {
   const { id_siswa, id_kursus } = data;
 
@@ -201,7 +202,7 @@ export async function getFilterKursus(filters: {
 
   const values: any[] = [];
   let idx = 1;
-
+       
   if (filters.nama_pelajaran) {
     sql += ` AND pelajaran.nama_pelajaran ILIKE $${idx}`;
     values.push(`%${filters.nama_pelajaran}%`);
@@ -235,6 +236,106 @@ export async function getFilterKursus(filters: {
   sql += ` ORDER BY kursus.tanggal_mengajar ASC, kursus.waktu_mulai ASC`;
 
   const rows = await queryDB(sql, values);
+
+  return formatResult(rows, "getAll");
+}
+
+export async function updateRequestKursus(id_detail_kursus: number) {
+  const result = await queryDB(
+    `SELECT id_kursus 
+     FROM detail_kursus 
+     WHERE id_detail_kursus = $1`,
+    [id_detail_kursus]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error("Data tidak ditemukan");
+  }
+
+  const id_kursus = result.rows[0].id_kursus;
+
+  // cek sudah ada ACC atau belum
+  const check = await queryDB(
+    `SELECT 1 FROM detail_kursus
+     WHERE id_kursus = $1 
+     AND keterangan = 'ACC'`,
+    [id_kursus]
+  );
+
+  if (check.rows.length > 0) {
+    throw new Error("Sudah ada siswa yang di-ACC");
+  }
+
+  await queryDB("BEGIN");
+
+  try {
+    // ACC yang dipilih
+    await queryDB(
+      `UPDATE detail_kursus
+       SET keterangan = 'ACC'
+       WHERE id_detail_kursus = $1`,
+      [id_detail_kursus]
+    );
+
+    // DECLINE yang lain
+    await queryDB(
+      `UPDATE detail_kursus
+       SET keterangan = 'DECLINE'
+       WHERE id_kursus = $1
+       AND id_detail_kursus != $2`,
+      [id_kursus, id_detail_kursus]
+    );
+
+    await queryDB("COMMIT");
+
+    return {
+      message: "Berhasil ACC, yang lain otomatis DECLINE",
+    };
+
+  } catch (error) {
+    await queryDB("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function getKursusBySiswa(id_siswa: number, status: string) {
+  let whereClause = ``;
+
+  if (status === "SELESAI") {
+    whereClause += ` AND k.tanggal_mengajar <= CURRENT_DATE`;
+  } else if (status === "BELUM") {
+    whereClause += ` AND k.tanggal_mengajar >= CURRENT_DATE`;
+  }
+
+  let sql = `
+    SELECT 
+      k.id_kursus,
+      p.full_name,
+      pr.nama_provinsi,
+      kb.nama_kabupaten,
+      pl.nama_pelajaran,
+      k.tanggal_mengajar,
+      k.waktu_mulai,
+      k.waktu_selesai,
+      k.mode
+    FROM detail_kursus dk
+    INNER JOIN kursus k 
+      ON dk.id_kursus = k.id_kursus 
+    INNER JOIN pengguna p 
+      ON k.id_relawan = p.user_id
+    INNER JOIN provinsi pr 
+      ON p.id_provinsi = pr.id_provinsi
+    INNER JOIN kabupaten kb 
+      ON p.id_kabupaten = kb.id_kabupaten
+    INNER JOIN pelajaran pl 
+      ON k.id_pelajaran = pl.id_pelajaran
+    WHERE dk.id_siswa = $1
+      ${whereClause}
+      AND dk.keterangan = 'ACC'
+    ORDER BY k.tanggal_mengajar ASC, k.waktu_mulai ASC
+  `;
+
+  const rows = await queryDB(sql, [id_siswa]);
 
   return formatResult(rows, "getAll");
 }

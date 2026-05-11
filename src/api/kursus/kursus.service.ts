@@ -1,4 +1,4 @@
-import { insertKursusBodyDTO } from './kursus.schema';
+import { insertKursusBodyDTO, getKursusBySiswaQuery} from './kursus.schema';
 import { InsertRequestKursusBodyDTO } from './kursus.schema';
 import { GetFilterKursusQueryDTO } from "./kursus.schema";
 import * as model from "./kursus.model";
@@ -28,5 +28,9 @@ export async function getFilterKursus(filters: GetFilterKursusQueryDTO) {
 }
 
 export async function updateRequestKursus(id_detail_kursus: number) {
-    return await model.updateRequestKursus(id_detail_kursus);
+  return await model.updateRequestKursus(id_detail_kursus);
+}
+
+export async function getKursusBySiswa(id_siswa: number, status: string) {
+    return await model.getKursusBySiswa(id_siswa, status);
 }

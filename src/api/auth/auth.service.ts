@@ -1,4 +1,5 @@
 import * as model from "./auth.model";
+import { supabase } from "../../config/supabase.config";
 
 /* -------------------------------------------------------------------------- */
 /*                                   LOGIN                                    */
@@ -83,6 +84,40 @@ export async function registerUser(body: any) {
         };
     }
 
+    let ktpFileName = null;
+
+    if (ktp) {
+        try {
+            // Generate unique filename
+            const timestamp = Date.now();
+            const fileExtension = ktp.name.split('.').pop() || 'png';
+            ktpFileName = `${timestamp}_${email.split('@')[0]}.${fileExtension}`;
+            const filePath = `KTP/${ktpFileName}`;
+
+            // Upload to Supabase Storage
+            const { error } = await supabase.storage
+                .from('teman-belajar')
+                .upload(filePath, ktp, {
+                    cacheControl: '3600',
+                    upsert: false,
+                });
+
+            if (error) {
+                console.error("Supabase upload error:", error);
+                return {
+                    data: null,
+                    message: "Gagal mengupload KTP",
+                };
+            }
+        } catch (error) {
+            console.error("File upload error:", error);
+            return {
+                data: null,
+                message: "Terjadi kesalahan saat mengupload KTP",
+            };
+        }
+    }
+
     // Create user
     const result = await model.createUser({
         full_name,
@@ -95,7 +130,7 @@ export async function registerUser(body: any) {
         id_kabupaten: id_kabupaten || null,
         pekerjaan: pekerjaan || null,
         institusi: institusi || null,
-        ktp: ktp || null,
+        ktp: ktpFileName,
         bidang_keahlian: bidang_keahlian || null,
         bio: bio || null,
     });

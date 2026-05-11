@@ -5,6 +5,7 @@ import { InsertRequestKursusBodyDTO } from "./kursus.schema";
 import { GetRequestKursusQueryDTO } from "./kursus.schema";
 import { GetFilterKursusQueryDTO } from "./kursus.schema";
 import { UpdateRequestKursusParamsDTO } from "./kursus.schema";
+import { GetKursusBySiswaQueryDTO } from "./kursus.schema";
 
 export async function insertKursus(ctx: any){
     const body = ctx.body as insertKursusBodyDTO;
@@ -50,7 +51,16 @@ export async function getFilterKursus(ctx: any){
 }
 
 export async function updateRequestKursus(ctx: any) {
-    const { id_detail_kursus } = ctx.params as UpdateRequestKursusParamsDTO;
-    const result = await service.updateRequestKursus(id_detail_kursus);
+  const { id_detail_kursus } =ctx.params as UpdateRequestKursusParamsDTO;
+
+  const result = await service.updateRequestKursus(id_detail_kursus);
+
+  return formatResponse(ctx, result);
+}
+
+export async function getKursusBySiswa(ctx: any) {
+    const { id_siswa, status } = ctx.query as GetKursusBySiswaQueryDTO;
+
+    const result = await service.getKursusBySiswa(id_siswa, status);
     return formatResponse(ctx, result);
 }

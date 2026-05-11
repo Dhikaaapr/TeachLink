@@ -7,6 +7,7 @@ import { securityHeaders } from "./plugins/security.plugin";
 import { errorHandler } from "./middleware/error.middleware";
 import { basicAuth } from "./plugins/basic-auth.plugin";
 import apiRoutes from "./api";
+import { uploadPlugin } from './plugins/upload.plugin'
 
 const app = new Elysia();
 
@@ -15,6 +16,7 @@ const app = new Elysia();
 /* -------------------------------------------------------------------------- */
 
 app.onError(errorHandler);
+app.use(uploadPlugin)
 
 /* -------------------------------------------------------------------------- */
 /*                          📚 OpenAPI documentation                          *

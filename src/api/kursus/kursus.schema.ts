@@ -53,7 +53,18 @@ export const getFilterKursusQuery = t.Object({
 export type GetFilterKursusQueryDTO = typeof getFilterKursusQuery.static;
 
 export const updateRequestKursusParams = t.Object({
-    id_detail_kursus: t.Number({ min: 1 }),
+  id_detail_kursus: t.Number({ min: 1 }),
 });
 
 export type UpdateRequestKursusParamsDTO = typeof updateRequestKursusParams.static;
+
+export const getKursusBySiswaQuery = t.Object({
+    id_siswa: t.Number({ min: 1 }),
+    status: t.Union([
+        t.Literal("ALL"),
+        t.Literal("SELESAI"),
+        t.Literal("BELUM")
+    ])
+});
+
+export type GetKursusBySiswaQueryDTO = typeof getKursusBySiswaQuery.static;

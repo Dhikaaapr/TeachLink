@@ -54,7 +54,7 @@ export const authRoutes = new Elysia({
         }
     })
 
-        .post("/register", controller.register, {
+    .post("/register", controller.register, {
         body: registerBody,
         response: { 200: defaultResponse() },
         detail: {

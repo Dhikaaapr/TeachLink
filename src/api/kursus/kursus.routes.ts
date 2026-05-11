@@ -8,6 +8,7 @@ import { insertRequestKursusBody } from "./kursus.schema";
 import { getRequestKursusQuery } from "./kursus.schema";
 import { getFilterKursusQuery } from "./kursus.schema";
 import { updateRequestKursusParams } from "./kursus.schema";
+import { getKursusBySiswaQuery } from "./kursus.schema";
 
 export const kursusRoutes = new Elysia({
   prefix: "/kursus",
@@ -84,6 +85,17 @@ export const kursusRoutes = new Elysia({
       tags: ["Kursus"],
       summary: "Update Request Kursus",
       description: "Update the status of a kursus request", 
+    },
+  })
+  
+  .get("/siswa", controller.getKursusBySiswa, {
+    beforeHandle: [authenticate()],
+    response: { 200: defaultResponse() },
+    query: getKursusBySiswaQuery,
+    detail: {
+      tags: ["Kursus"],
+      summary: "Get Kursus by Id Siswa",
+      description: "Get a list of all kursus by id siswa",
     },
   });
 
