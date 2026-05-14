@@ -97,5 +97,15 @@ export const kursusRoutes = new Elysia({
       summary: "Get Kursus by Id Siswa",
       description: "Get a list of all kursus by id siswa",
     },
+  })
+  
+  .get("/recommendations", controller.getRecommendations, {
+    beforeHandle: [authenticate()],
+    response: { 200: defaultResponse() },
+    detail: {
+      tags: ["Kursus"],
+      summary: "Get Recommended Kursus",
+      description: "Get a list of recommended kursus for student based on interests",
+    },
   });
 

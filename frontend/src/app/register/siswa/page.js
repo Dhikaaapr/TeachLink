@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../register.module.css";
 import { apiRequest } from "../../../utils/api";
+import { useAuth } from "../../context/AuthContext";
+import { ROLES } from "../../../utils/constants";
 
 const subjects = [
   "Matematika", "Bahasa Indonesia", "Bahasa Inggris", "Fisika",
@@ -12,6 +14,7 @@ const subjects = [
 
 export default function RegisterSiswa() {
   const router = useRouter();
+  const { login } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,18 +53,18 @@ export default function RegisterSiswa() {
           full_name: form.name,
           email: form.email,
           password: form.password,
-          id_role: 2, // 2 for Siswa
-          nomor_telepon: form.phone,
-          institusi: form.school,
-          bio: form.goals,
-          // age is not in schema, so we skip it or map it if needed
+          id_role: ROLES.SISWA,
+          nomor_telepon: form.phone || undefined,
+          institusi: form.school || undefined,
+          bidang_keahlian: form.subjects.join(", ") || undefined,
+          bio: form.goals || undefined,
         },
       });
 
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+ 
+      // Login otomatis setelah daftar
+      await login(form.email, form.password);
+      router.push("/dashboard/siswa");
     } catch (err) {
       setError(err.message);
     } finally {

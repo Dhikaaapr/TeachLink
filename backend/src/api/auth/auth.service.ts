@@ -29,7 +29,7 @@ export async function loginUser(email: string, password: string) {
             user_id: user.user_id,
             full_name: user.full_name,
             email: user.email,
-            role: user.role,
+            id_role: user.id_role,
         },
         message: "Login success",
     };
@@ -147,6 +147,7 @@ export async function registerUser(body: any) {
             user_id: result.data.user_id,
             full_name: result.data.full_name,
             email: result.data.email,
+            id_role: result.data.id_role,
         },
         message: "Register berhasil",
     };

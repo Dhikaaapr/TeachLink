@@ -104,6 +104,130 @@
   color: var(--teal-primary);
 }
 
+/* ── User Menu (logged-in) ── */
+.userMenu {
+  position: relative;
+}
+
+.userBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--gray-200);
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--gray-700);
+}
+
+.userBtn:hover {
+  border-color: var(--teal-primary);
+  background: var(--teal-light);
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0F6E56, #0A5743);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
+}
+
+.userNameText {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: var(--space-2);
+  z-index: 1002;
+  animation: fadeInUp 0.2s ease;
+}
+
+.dropdownHeader {
+  padding: var(--space-3) var(--space-4);
+}
+
+.dropdownName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.dropdownRole {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  text-transform: capitalize;
+  margin-top: 2px;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: var(--gray-100);
+  margin: var(--space-1) var(--space-3);
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  text-align: left;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.dropdownItem:hover {
+  background: var(--gray-50);
+  color: var(--teal-primary);
+}
+
+.navSkeleton {
+  width: 120px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Hamburger */
 .hamburger {
   display: none;

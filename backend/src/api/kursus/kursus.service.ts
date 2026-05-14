@@ -34,3 +34,7 @@ export async function updateRequestKursus(id_detail_kursus: number) {
 export async function getKursusBySiswa(id_siswa: number, status: string) {
     return await model.getKursusBySiswa(id_siswa, status);
 }
+
+export async function getRecommendations(id_siswa: string) {
+    return await model.getRecommendations(id_siswa);
+}

@@ -2,6 +2,8 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Hero.module.css";
 
 const stats = [
@@ -12,6 +14,10 @@ const stats = [
 
 export default function Hero() {
   const sectionRef = useRef(null);
+  const { user, isAuthenticated, loading, getDashboardPath } = useAuth();
+  const router = useRouter();
+ 
+  const dashboardPath = getDashboardPath();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -63,30 +69,25 @@ export default function Hero() {
           </p>
 
           <div className={styles.heroCta}>
-            <Link href="/cari-relawan" className="btn btn-primary btn-lg" id="btn-cari-relawan">
-              Cari Relawan
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path
-                  d="M4 10H16M16 10L11 5M16 10L11 15"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-            <Link href="/register/relawan" className="btn btn-coral btn-lg" id="btn-jadi-relawan">
-              Jadi Relawan
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path
-                  d="M4 10H16M16 10L11 5M16 10L11 15"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
+            {loading ? (
+              <div style={{ height: "56px" }}></div> // Placeholder saat loading
+            ) : isAuthenticated ? (
+              <Link href={dashboardPath} className="btn btn-primary btn-lg" id="btn-dashboard-hero">
+                Masuk ke Dashboard Saya
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+            ) : (
+              <>
+                <Link href="/register/siswa" className="btn btn-outline btn-lg" id="btn-siswa-hero">
+                  Saya Siswa
+                </Link>
+                <Link href="/register/relawan" className="btn btn-primary btn-lg" id="btn-relawan-hero">
+                  Saya Relawan
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Social Proof Stats */}

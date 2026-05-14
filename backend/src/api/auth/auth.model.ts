@@ -12,6 +12,7 @@ export async function getUser(email: string) {
       a.full_name, 
       a.email,
       a.password,
+      a.id_role,
       b.role 
     FROM pengguna a 
     INNER JOIN role b ON a.id_role = b.id_role  
@@ -34,6 +35,7 @@ export async function getCurrentUserById(user_id: string) {
         a.user_id,
         a.full_name,
         a.email,
+        a.id_role,
         b.role
       FROM pengguna a
       INNER JOIN role b ON a.id_role = b.id_role
@@ -84,7 +86,7 @@ export async function createUser(data: any) {
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
     )
-    RETURNING user_id, full_name, email;
+    RETURNING user_id, full_name, email, id_role;
   `;
 
   const rows = await queryDB(sql, [

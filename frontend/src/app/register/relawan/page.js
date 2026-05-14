@@ -3,6 +3,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../register.module.css";
+import { apiRequest } from "../../../utils/api";
+import { useAuth } from "../../context/AuthContext";
+import { ROLES } from "../../../utils/constants";
 
 /* ─────────────── KONSTANTA ─────────────── */
 const EXPERTISE_LIST = [
@@ -127,9 +130,11 @@ function PeriodeBadge({ status }) {
 /* ─────────────── KOMPONEN UTAMA ─────────────── */
 export default function RegisterRelawan() {
   const router = useRouter();
+  const { login } = useAuth();
   const [step, setStep]       = useState(1);
   const [loading, setLoading] = useState(false);
   const [done, setDone]       = useState(false);
+  const [error, setError]     = useState("");
 
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPass: "",
@@ -152,11 +157,39 @@ export default function RegisterRelawan() {
   const selectedPeriodeObj    = useMemo(() => PERIODES.find(p => p.id === form.selectedPeriode) || null, [form.selectedPeriode]);
   const selectedPeriodeStatus = selectedPeriodeObj ? getPeriodeStatus(selectedPeriodeObj) : null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.password !== form.confirmPass) {
+      setError("Password tidak cocok");
+      return;
+    }
     setLoading(true);
-    // TODO: POST /api/register-relawan
-    setTimeout(() => { setLoading(false); setDone(true); }, 1500);
+    setError("");
+
+    try {
+      await apiRequest("/auth/register", {
+        method: "POST",
+        body: {
+          full_name: form.name,
+          email: form.email,
+          password: form.password,
+          id_role: ROLES.RELAWAN, // Gunakan konstanta agar tidak tertukar lagi
+          nomor_telepon: form.phone || undefined,
+          pekerjaan: form.occupation || undefined,
+          institusi: form.institution || undefined,
+          bidang_keahlian: form.expertise.join(", ") || undefined,
+          bio: form.motivation || undefined,
+        },
+      });
+
+      // Login otomatis setelah daftar
+      await login(form.email, form.password);
+      router.push("/dashboard/relawan");
+    } catch (err) {
+      setError(err.message || "Gagal mendaftar. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── SUCCESS ── */
@@ -235,6 +268,11 @@ export default function RegisterRelawan() {
         <div className={styles.formContainer}>
           <form onSubmit={handleSubmit}>
 
+            {error && (
+              <div style={{padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, color: "#DC2626", fontSize: 13, marginBottom: 16, animation: "fadeInUp 0.3s ease"}}>
+                ⚠️ {error}
+              </div>
+            )}
             {/* ══ STEP 1 — AKUN ══ */}
             {step === 1 && (
               <div className={styles.stepContent}>

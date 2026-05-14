@@ -339,3 +339,49 @@ export async function getKursusBySiswa(id_siswa: number, status: string) {
 
   return formatResult(rows, "getAll");
 }
+
+export async function getRecommendations(id_siswa: string) {
+  // Query ini mencari Relawan yang cocok minat, tapi kalau nggak ada tetap tampilin Relawan lain
+  const sql = `
+    WITH student_interests AS (
+      SELECT unnest(string_to_array(bidang_keahlian, ',')) AS interest
+      FROM pengguna 
+      WHERE user_id = $1
+    ),
+    all_volunteers AS (
+      SELECT 
+        p.user_id,
+        p.full_name,
+        p.bidang_keahlian,
+        kab.nama_kabupaten,
+        -- Score 2 kalau keahlian di profil cocok minat siswa
+        CASE WHEN EXISTS (
+          SELECT 1 FROM student_interests si 
+          WHERE p.bidang_keahlian ILIKE '%' || trim(si.interest) || '%'
+        ) THEN 2 ELSE 0 END as match_score
+      FROM pengguna p
+      LEFT JOIN kabupaten kab ON p.id_kabupaten = kab.id_kabupaten
+      WHERE p.id_role = 2 -- Role Relawan
+    )
+    SELECT 
+      v.user_id as id_relawan,
+      v.full_name,
+      v.bidang_keahlian as relawan_exp,
+      v.nama_kabupaten,
+      k.id_kursus,
+      k.tanggal_mengajar,
+      k.waktu_mulai,
+      k.mode,
+      pel.nama_pelajaran,
+      -- Tambah score kalau beneran ada jadwal kursus yang cocok
+      (v.match_score + CASE WHEN pel.nama_pelajaran ILIKE ANY (SELECT '%' || trim(interest) || '%' FROM student_interests) THEN 3 ELSE 0 END) as final_score
+    FROM all_volunteers v
+    LEFT JOIN kursus k ON v.user_id = k.id_relawan AND k.tanggal_mengajar >= CURRENT_DATE
+    LEFT JOIN pelajaran pel ON k.id_pelajaran = pel.id_pelajaran
+    ORDER BY final_score DESC, k.tanggal_mengajar ASC NULLS LAST
+    LIMIT 6;
+  `;
+
+  const rows = await queryDB(sql, [id_siswa]);
+  return formatResult(rows, "getAll");
+}

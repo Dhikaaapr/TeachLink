@@ -60,7 +60,13 @@ export async function updateRequestKursus(ctx: any) {
 
 export async function getKursusBySiswa(ctx: any) {
     const { id_siswa, status } = ctx.query as GetKursusBySiswaQueryDTO;
-
+ 
     const result = await service.getKursusBySiswa(id_siswa, status);
+    return formatResponse(ctx, result);
+}
+ 
+export async function getRecommendations(ctx: any) {
+    const { id_siswa } = ctx.query;
+    const result = await service.getRecommendations(id_siswa);
     return formatResponse(ctx, result);
 }
