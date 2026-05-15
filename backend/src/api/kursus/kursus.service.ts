@@ -38,3 +38,7 @@ export async function getKursusBySiswa(id_siswa: number, status: string) {
 export async function getRecommendations(id_siswa: string) {
     return await model.getRecommendations(id_siswa);
 }
+
+export async function updateWaktuMengajar(id_kursus: number, waktu_mulai: string, waktu_selesai: string) {
+  return await model.updateWaktuMengajar(id_kursus, waktu_mulai, waktu_selesai);
+}

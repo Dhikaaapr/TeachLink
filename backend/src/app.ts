@@ -46,6 +46,7 @@ if (!isProduction) {
                     { name: "Kabupaten", description: "Kabupaten endpoints", },
                     { name: "Pelajaran", description: "Pelajaran endpoints", },
                     { name: "Kursus", description: "Kursus endpoints", },
+                    { name: "Master", description: "Master data endpoints", },
                 ],
                 components: {
                     securitySchemes: {

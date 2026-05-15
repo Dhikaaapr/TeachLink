@@ -110,9 +110,10 @@ export async function insertRequestKursus(data: any) {
   const sql = `
     INSERT INTO detail_kursus (
       id_siswa,
-      id_kursus
+      id_kursus,
+      keterangan
     ) VALUES (
-      $1, $2
+      $1, $2, 'PENDING'
     )
     RETURNING 
       id_kursus,
@@ -145,9 +146,9 @@ export async function getRequestKursus(id_relawan: number, keterangan: string) {
       ON dk.id_siswa = p.user_id
     INNER JOIN kursus k 
       ON dk.id_kursus = k.id_kursus
-    INNER JOIN provinsi pr 
+    LEFT JOIN provinsi pr 
       ON p.id_provinsi = pr.id_provinsi
-    INNER JOIN kabupaten kb 
+    LEFT JOIN kabupaten kb 
       ON p.id_kabupaten = kb.id_kabupaten
     INNER JOIN pelajaran pl 
       ON k.id_pelajaran = pl.id_pelajaran
@@ -178,6 +179,7 @@ export async function getFilterKursus(filters: {
   let sql = `
         SELECT 
           kursus.id_kursus,
+          pengguna.user_id,
           pengguna.full_name,
           provinsi.nama_provinsi,
           provinsi.id_provinsi,
@@ -191,9 +193,9 @@ export async function getFilterKursus(filters: {
         FROM kursus
         INNER JOIN pengguna 
             ON kursus.id_relawan = pengguna.user_id
-        INNER JOIN provinsi 
+        LEFT JOIN provinsi 
             ON pengguna.id_provinsi = provinsi.id_provinsi
-        INNER JOIN kabupaten 
+        LEFT JOIN kabupaten 
             ON pengguna.id_kabupaten = kabupaten.id_kabupaten
         INNER JOIN pelajaran 
             ON kursus.id_pelajaran = pelajaran.id_pelajaran
@@ -204,7 +206,7 @@ export async function getFilterKursus(filters: {
   let idx = 1;
        
   if (filters.nama_pelajaran) {
-    sql += ` AND pelajaran.nama_pelajaran ILIKE $${idx}`;
+    sql += ` AND (pelajaran.nama_pelajaran ILIKE $${idx} OR pengguna.full_name ILIKE $${idx})`;
     values.push(`%${filters.nama_pelajaran}%`);
     idx++;
   }
@@ -225,7 +227,7 @@ export async function getFilterKursus(filters: {
     if (filters.mode === "all") {
       // Do nothing, include all modes
     } else {
-      sql += ` AND kursus.mode = $${idx}`;
+      sql += ` AND kursus.mode ILIKE $${idx}`;
       values.push(filters.mode);
       idx++;
     }
@@ -363,25 +365,40 @@ export async function getRecommendations(id_siswa: string) {
       LEFT JOIN kabupaten kab ON p.id_kabupaten = kab.id_kabupaten
       WHERE p.id_role = 2 -- Role Relawan
     )
-    SELECT 
-      v.user_id as id_relawan,
-      v.full_name,
-      v.bidang_keahlian as relawan_exp,
-      v.nama_kabupaten,
-      k.id_kursus,
-      k.tanggal_mengajar,
-      k.waktu_mulai,
-      k.mode,
-      pel.nama_pelajaran,
-      -- Tambah score kalau beneran ada jadwal kursus yang cocok
-      (v.match_score + CASE WHEN pel.nama_pelajaran ILIKE ANY (SELECT '%' || trim(interest) || '%' FROM student_interests) THEN 3 ELSE 0 END) as final_score
-    FROM all_volunteers v
-    LEFT JOIN kursus k ON v.user_id = k.id_relawan AND k.tanggal_mengajar >= CURRENT_DATE
-    LEFT JOIN pelajaran pel ON k.id_pelajaran = pel.id_pelajaran
-    ORDER BY final_score DESC, k.tanggal_mengajar ASC NULLS LAST
-    LIMIT 6;
+    SELECT * FROM (
+      SELECT DISTINCT ON (v.user_id)
+        v.user_id as id_relawan,
+        v.full_name,
+        v.bidang_keahlian as relawan_exp,
+        v.nama_kabupaten,
+        k.id_kursus,
+        k.tanggal_mengajar,
+        k.waktu_mulai,
+        k.waktu_selesai,
+        k.mode,
+        pel.nama_pelajaran,
+        (v.match_score + CASE WHEN pel.nama_pelajaran ILIKE ANY (SELECT '%' || trim(interest) || '%' FROM student_interests) THEN 3 ELSE 0 END) as final_score
+      FROM all_volunteers v
+      INNER JOIN kursus k ON v.user_id = k.id_relawan AND k.tanggal_mengajar >= CURRENT_DATE
+      INNER JOIN pelajaran pel ON k.id_pelajaran = pel.id_pelajaran
+      ORDER BY v.user_id, k.tanggal_mengajar ASC
+    ) unique_volunteers
+    ORDER BY final_score DESC, tanggal_mengajar ASC
+    LIMIT 4;
   `;
 
   const rows = await queryDB(sql, [id_siswa]);
   return formatResult(rows, "getAll");
+}
+
+export async function updateWaktuMengajar(id_kursus: number, waktu_mulai: string, waktu_selesai: string) {
+  const sql = `
+    UPDATE kursus 
+    SET waktu_mulai = $2,
+        waktu_selesai = $3
+    WHERE id_kursus = $1
+  `;
+
+  const result = await queryDB(sql, [id_kursus, waktu_mulai, waktu_selesai]);
+  return formatResult(result, "update");
 }

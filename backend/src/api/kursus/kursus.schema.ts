@@ -68,3 +68,11 @@ export const getKursusBySiswaQuery = t.Object({
 });
 
 export type GetKursusBySiswaQueryDTO = typeof getKursusBySiswaQuery.static;
+
+export const updateWaktuMengajarBody = t.Object({
+  id_kursus: t.Number({ min: 1 }),
+  waktu_mulai: t.String({ pattern: "^([01]\\d|2[0-3]):([0-5]\\d)$" }), // HH:mm
+  waktu_selesai: t.String({ pattern: "^([01]\\d|2[0-3]):([0-5]\\d)$" }), // HH:mm
+});
+
+export type UpdateWaktuMengajarBodyDTO = typeof updateWaktuMengajarBody.static;

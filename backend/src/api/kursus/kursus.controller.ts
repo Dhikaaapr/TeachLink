@@ -6,6 +6,7 @@ import { GetRequestKursusQueryDTO } from "./kursus.schema";
 import { GetFilterKursusQueryDTO } from "./kursus.schema";
 import { UpdateRequestKursusParamsDTO } from "./kursus.schema";
 import { GetKursusBySiswaQueryDTO } from "./kursus.schema";
+import { UpdateWaktuMengajarBodyDTO } from "./kursus.schema";
 
 export async function insertKursus(ctx: any){
     const body = ctx.body as insertKursusBodyDTO;
@@ -69,4 +70,12 @@ export async function getRecommendations(ctx: any) {
     const { id_siswa } = ctx.query;
     const result = await service.getRecommendations(id_siswa);
     return formatResponse(ctx, result);
+}
+
+export async function updateWaktuMengajar(ctx: any) {
+  const { id_kursus, waktu_mulai, waktu_selesai } = ctx.body as UpdateWaktuMengajarBodyDTO;
+
+  const result = await service.updateWaktuMengajar(id_kursus, waktu_mulai, waktu_selesai);
+
+  return formatResponse(ctx, result);
 }

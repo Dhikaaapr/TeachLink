@@ -9,6 +9,7 @@ import { getRequestKursusQuery } from "./kursus.schema";
 import { getFilterKursusQuery } from "./kursus.schema";
 import { updateRequestKursusParams } from "./kursus.schema";
 import { getKursusBySiswaQuery } from "./kursus.schema";
+import { updateWaktuMengajarBody } from "./kursus.schema";
 
 export const kursusRoutes = new Elysia({
   prefix: "/kursus",
@@ -106,6 +107,17 @@ export const kursusRoutes = new Elysia({
       tags: ["Kursus"],
       summary: "Get Recommended Kursus",
       description: "Get a list of recommended kursus for student based on interests",
+    },
+  })
+  
+  .patch("/waktu-mengajar", controller.updateWaktuMengajar, {
+    beforeHandle: [authenticate()],
+    response: { 200: defaultResponse() },
+    body: updateWaktuMengajarBody,
+    detail: {
+      tags: ["Kursus"],
+      summary: "Update Waktu Mengajar",
+      description: "Update the teaching schedule of a kursus", 
     },
   });
 
