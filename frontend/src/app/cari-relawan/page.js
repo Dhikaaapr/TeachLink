@@ -1,35 +1,109 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import styles from "./cari-relawan.module.css";
-
-const allRelawan = [
-  { id: 1, name: "Andi Pratama", expertise: ["Matematika", "Fisika"], city: "Jakarta Selatan", rating: 4.9, hours: 120, reviews: 34, avatar: "AP", online: true, mode: ["Online", "Offline"], bio: "Mahasiswa ITB semester 6, passionate mengajar Matematika & Fisika." },
-  { id: 2, name: "Sari Dewi", expertise: ["Bahasa Inggris", "Bahasa Indonesia"], city: "Bandung", rating: 4.8, hours: 95, reviews: 28, avatar: "SD", online: false, mode: ["Online"], bio: "TOEFL tutor berpengalaman, siap bantu kamu mahir berbahasa Inggris." },
-  { id: 3, name: "Budi Santoso", expertise: ["Kimia", "Biologi"], city: "Surabaya", rating: 4.7, hours: 80, reviews: 22, avatar: "BS", online: true, mode: ["Offline"], bio: "Guru SMA dengan 5 tahun pengalaman mengajar IPA." },
-  { id: 4, name: "Rina Maharani", expertise: ["Komputer", "Matematika"], city: "Yogyakarta", rating: 4.9, hours: 150, reviews: 41, avatar: "RM", online: true, mode: ["Online", "Offline"], bio: "Software engineer yang senang berbagi ilmu coding & logika." },
-  { id: 5, name: "Fajar Hidayat", expertise: ["Fisika", "Matematika"], city: "Semarang", rating: 4.6, hours: 65, reviews: 18, avatar: "FH", online: false, mode: ["Online"], bio: "Mahasiswa Fisika UGM, suka membuat konsep sulit jadi mudah." },
-  { id: 6, name: "Lina Kusuma", expertise: ["Bahasa Inggris", "Sejarah"], city: "Malang", rating: 4.8, hours: 110, reviews: 30, avatar: "LK", online: true, mode: ["Online", "Offline"], bio: "Lulusan sastra Inggris, mengajar bahasa dan sejarah dengan metode cerita." },
-];
+import { useAuth } from "../context/AuthContext";
+import { apiRequestWithRetry } from "../../utils/api";
 
 const subjects = ["Semua", "Matematika", "Fisika", "Kimia", "Biologi", "Bahasa Inggris", "Bahasa Indonesia", "Komputer", "Sejarah"];
 
 export default function CariRelawan() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("Semua");
   const [modeFilter, setModeFilter] = useState("all");
+  const [filterProvinsi, setFilterProvinsi] = useState("");
+  const [filterKota, setFilterKota] = useState("");
   const [requestedIds, setRequestedIds] = useState([]);
+  
+  const [realKursus, setRealKursus] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState("");
+  const [toastShow, setToastShow] = useState(false);
 
-  const filtered = allRelawan.filter(r => {
-    const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) || r.city.toLowerCase().includes(search.toLowerCase());
-    const matchSubject = selectedSubject === "Semua" || r.expertise.includes(selectedSubject);
-    const matchMode = modeFilter === "all" || r.mode.includes(modeFilter === "online" ? "Online" : "Offline");
-    return matchSearch && matchSubject && matchMode;
-  });
+  const [provinces, setProvinces] = useState([]);
+  const [kabupatens, setKabupatens] = useState([]);
 
-  const handleRequest = (id) => {
-    setRequestedIds(prev => [...prev, id]);
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await apiRequestWithRetry("/provinsi/all");
+        if (res.success) setProvinces(res.data || []);
+      } catch (err) { console.error("Failed to fetch provinces", err); }
+    };
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (filterProvinsi) {
+      const fetchKabupaten = async () => {
+        try {
+          const res = await apiRequestWithRetry(`/kabupaten/provinsi/${filterProvinsi}`);
+          if (res.success) setKabupatens(res.data || []);
+        } catch (err) { console.error("Failed to fetch kabupaten", err); }
+      };
+      fetchKabupaten();
+    } else {
+      setKabupatens([]);
+    }
+  }, [filterProvinsi]);
+
+  useEffect(() => {
+    const fetchKursus = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          mode: modeFilter,
+          ...(selectedSubject !== "Semua" && { nama_pelajaran: selectedSubject }),
+          ...(search && { nama_pelajaran: search }),
+          ...(filterProvinsi && { id_provinsi: filterProvinsi }),
+          ...(filterKota && { id_kabupaten: filterKota }),
+        });
+        
+        const res = await apiRequestWithRetry(`/kursus/filter?${params.toString()}`);
+        if (res.success) {
+          setRealKursus(res.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch kursus:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    const debounce = setTimeout(fetchKursus, 500);
+    return () => clearTimeout(debounce);
+  }, [search, selectedSubject, modeFilter, filterProvinsi, filterKota]);
+
+  const handleRequest = async (id_kursus, name) => {
+    if (!user) {
+      showToast("Silakan login terlebih dahulu");
+      return;
+    }
+    try {
+      await apiRequestWithRetry("/kursus/request-kursus", {
+        method: "POST",
+        body: {
+          id_siswa: user.user_id,
+          id_kursus: id_kursus,
+        }
+      });
+      setRequestedIds(prev => [...prev, id_kursus]);
+      showToast(`Request ke ${name} berhasil dikirim!`);
+    } catch (err) {
+      showToast(`Gagal: ${err.message}`);
+    }
   };
+
+  function showToast(msg) {
+    setToast(msg); setToastShow(true);
+    setTimeout(() => setToastShow(false), 3000);
+  }
+
+  function getInitials(name) {
+    if (!name) return "?";
+    return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  }
 
   return (
     <div className={styles.page}>
@@ -41,7 +115,7 @@ export default function CariRelawan() {
             Kembali
           </Link>
           <h1>Cari Relawan Pengajar</h1>
-          <p>{filtered.length} relawan tersedia</p>
+          <p>{realKursus.length} relawan tersedia</p>
         </div>
       </header>
 
@@ -55,7 +129,7 @@ export default function CariRelawan() {
             </svg>
             <input
               type="text"
-              placeholder="Cari berdasarkan nama atau kota..."
+              placeholder="Cari mata pelajaran..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className={styles.searchInput}
@@ -63,72 +137,77 @@ export default function CariRelawan() {
           </div>
 
           <div className={styles.filterRow}>
-            <div className={styles.subjectFilter}>
-              {subjects.map(s => (
-                <button
-                  key={s}
-                  className={`${styles.filterChip} ${selectedSubject === s ? styles.filterActive : ""}`}
-                  onClick={() => setSelectedSubject(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            <select className={styles.selInput} value={filterProvinsi} onChange={e => { setFilterProvinsi(e.target.value); setFilterKota(""); }}>
+              <option value="">Semua Provinsi</option>
+              {provinces.map(p => <option key={p.id_provinsi} value={p.id_provinsi}>{p.nama_provinsi}</option>)}
+            </select>
+
+            <select className={styles.selInput} value={filterKota} onChange={e => setFilterKota(e.target.value)} disabled={!filterProvinsi}>
+              <option value="">Semua Kabupaten</option>
+              {kabupatens.map(k => <option key={k.id_kabupaten} value={k.id_kabupaten}>{k.nama_kabupaten}</option>)}
+            </select>
 
             <div className={styles.modeFilter}>
               <button className={`${styles.modeBtn} ${modeFilter === "all" ? styles.modeActive : ""}`} onClick={() => setModeFilter("all")}>Semua</button>
               <button className={`${styles.modeBtn} ${modeFilter === "online" ? styles.modeActive : ""}`} onClick={() => setModeFilter("online")}>🟢 Online</button>
               <button className={`${styles.modeBtn} ${modeFilter === "offline" ? styles.modeActive : ""}`} onClick={() => setModeFilter("offline")}>📍 Offline</button>
+              <button className={`${styles.modeBtn} ${modeFilter === "online & offline" ? styles.modeActive : ""}`} onClick={() => setModeFilter("online & offline")}>🌓 Keduanya</button>
             </div>
+          </div>
+
+          <div className={styles.subjectFilter} style={{ marginTop: 12 }}>
+            {subjects.map(s => (
+              <button
+                key={s}
+                className={`${styles.filterChip} ${selectedSubject === s ? styles.filterActive : ""}`}
+                onClick={() => setSelectedSubject(s)}
+              >
+                {s}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Results Grid */}
         <div className={styles.grid}>
-          {filtered.map(r => (
-            <div className={styles.card} key={r.id}>
+          {loading ? (
+            <div className={styles.empty}>Memuat data...</div>
+          ) : realKursus.map(r => (
+            <div className={styles.card} key={r.id_kursus}>
               <div className={styles.cardTop}>
                 <div className={styles.avatar}>
-                  {r.avatar}
-                  {r.online && <span className={styles.onlineDot}></span>}
+                  {getInitials(r.full_name)}
+                  {r.mode !== "offline" && <span className={styles.onlineDot}></span>}
                 </div>
                 <div className={styles.cardInfo}>
-                  <h3 className={styles.name}>{r.name}</h3>
-                  <p className={styles.city}>📍 {r.city}</p>
-                </div>
-                <div className={styles.ratingBadge}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.75 3.7L13 5.3 10 8.2l.7 3.8L7 10.2 3.3 12l.7-3.8L1 5.3l4.25-.6L7 1z" fill="#FBBF24"/></svg>
-                  {r.rating}
+                  <h3 className={styles.name}>{r.nama_pelajaran}</h3>
+                  <p className={styles.city}>{r.full_name} • 📍 {r.nama_kabupaten}</p>
                 </div>
               </div>
 
-              <p className={styles.bio}>{r.bio}</p>
+              <p className={styles.bio}>Relawan pengajar mata pelajaran {r.nama_pelajaran}. Siap membantu Anda belajar dengan metode yang menyenangkan.</p>
 
               <div className={styles.tags}>
-                {r.expertise.map(e => (
-                  <span key={e} className={styles.tag}>{e}</span>
-                ))}
+                <span className={styles.tag}>{r.nama_pelajaran}</span>
               </div>
 
               <div className={styles.meta}>
-                <span>⏱ {r.hours} jam</span>
-                <span>💬 {r.reviews} review</span>
+                <span>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</span>
+                <span>⏰ {r.waktu_mulai.slice(0,5)} - {r.waktu_selesai?.slice(0,5)}</span>
                 <div className={styles.modes}>
-                  {r.mode.map(m => (
-                    <span key={m} className={styles.modeTag}>{m}</span>
-                  ))}
+                  <span className={styles.modeTag}>{r.mode}</span>
                 </div>
               </div>
 
               <div className={styles.cardActions}>
-                <Link href={`/profil/${r.id}`} className={styles.profileLink}>Lihat Profil</Link>
-                {requestedIds.includes(r.id) ? (
+                <Link href={`/profil/${r.id_relawan || r.user_id}`} className={styles.profileLink}>Lihat Profil</Link>
+                {requestedIds.includes(r.id_kursus) ? (
                   <button className={styles.requestedBtn} disabled>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8L7 11L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                     Terkirim
                   </button>
                 ) : (
-                  <button className={styles.requestBtn} onClick={() => handleRequest(r.id)}>
+                  <button className={styles.requestBtn} onClick={() => handleRequest(r.id_kursus, r.full_name)}>
                     Request Sesi
                   </button>
                 )}
@@ -137,7 +216,7 @@ export default function CariRelawan() {
           ))}
         </div>
 
-        {filtered.length === 0 && (
+        {!loading && realKursus.length === 0 && (
           <div className={styles.empty}>
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#D1D5DB" strokeWidth="2" fill="none"/><path d="M18 30s2-4 6-4 6 4 6 4M19 19h.01M29 19h.01" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             <h3>Tidak ada relawan ditemukan</h3>
@@ -145,6 +224,8 @@ export default function CariRelawan() {
           </div>
         )}
       </div>
+      {toastShow && <div className={styles.toastMsg}>{toast}</div>}
     </div>
   );
 }
+

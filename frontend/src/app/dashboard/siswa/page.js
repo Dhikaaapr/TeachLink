@@ -8,10 +8,7 @@ import { apiRequestWithRetry } from "../../../utils/api";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
 /* ─────────────── DATA ─────────────── */
-const KOTA_LIST = [
-  "Jakarta Selatan","Jakarta Timur","Jakarta Pusat",
-  "Bandung","Surabaya","Depok","Bekasi",
-];
+/* ─────────────── HELPERS ─────────────── */
  
 const KOTA_DEKAT = {
   "Jakarta Selatan": ["Jakarta Selatan","Jakarta Timur","Jakarta Pusat","Depok","Bekasi"],
@@ -57,9 +54,9 @@ export default function DashboardSiswa() {
 
   // Filter pencarian relawan
   const [searchQ, setSearchQ]       = useState("");
-  const [filterKota, setFilterKota] = useState("");
+ const [filterProvinsi, setFilterProvinsi] = useState("");
+const [filterKota, setFilterKota] = useState("");
   const [filterMode, setFilterMode] = useState("all");
-  const [sortBy, setSortBy]         = useState("rating");
 
   // Filter sesi
   const [sessFilter, setSessFilter] = useState("all");
@@ -68,6 +65,34 @@ export default function DashboardSiswa() {
   const [modal, setModal]           = useState(null);
   const [toast, setToast]           = useState("");
   const [toastShow, setToastShow]   = useState(false);
+
+  // Lists for dropdowns
+  const [provinces, setProvinces] = useState([]);
+  const [kabupatens, setKabupatens] = useState([]);
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await apiRequestWithRetry("/provinsi/all");
+        if (res.success) setProvinces(res.data || []);
+      } catch (err) { console.error("Failed to fetch provinces", err); }
+    };
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (filterProvinsi) {
+      const fetchKabupaten = async () => {
+        try {
+          const res = await apiRequestWithRetry(`/kabupaten/provinsi/${filterProvinsi}`);
+          if (res.success) setKabupatens(res.data || []);
+        } catch (err) { console.error("Failed to fetch kabupaten", err); }
+      };
+      fetchKabupaten();
+    } else {
+      setKabupatens([]);
+    }
+  }, [filterProvinsi]);
 
   // Toast pengaturan
   const [settToast, setSettToast]   = useState(false);
@@ -91,6 +116,8 @@ export default function DashboardSiswa() {
           const params = new URLSearchParams({
             mode: filterMode,
             ...(searchQ && { nama_pelajaran: searchQ }),
+            ...(filterProvinsi && { id_provinsi: filterProvinsi }),
+            ...(filterKota && { id_kabupaten: filterKota }),
           });
           
           const res = await apiRequestWithRetry(`/kursus/filter?${params.toString()}`);
@@ -107,7 +134,7 @@ export default function DashboardSiswa() {
       const debounce = setTimeout(fetchKursus, 500);
       return () => clearTimeout(debounce);
     }
-  }, [tab, searchQ, filterMode]);
+  }, [tab, searchQ, filterMode, filterProvinsi, filterKota]);
 
   // Fetch real sessions
   useEffect(() => {
@@ -156,27 +183,27 @@ export default function DashboardSiswa() {
     [sessFilter, displaySessions]
   );
 
-  function openModal(r) { setModal(r); }
-  function closeModal() { setModal(null); }
+  const [requestedIds, setRequestedIds] = useState([]);
+  const [requestingId, setRequestingId] = useState(null);
 
-  function submitRequest() {
-    const isReal = !!modal.id_kursus;
-    const sendRequest = async () => {
-      try {
-        await apiRequestWithRetry("/kursus/request-kursus", {
-          method: "POST",
-          body: {
-            id_siswa: user.user_id,
-            id_kursus: isReal ? modal.id_kursus : modal.id,
-          }
-        });
-        showToast(`Request ke ${isReal ? modal.full_name : modal.name} berhasil dikirim!`);
-      } catch (err) {
-        showToast(`Gagal: ${err.message}`);
-      }
-    };
-    sendRequest();
-    closeModal();
+  async function handleRequest(id_kursus, displayName) {
+    if (requestedIds.includes(id_kursus)) return;
+    setRequestingId(id_kursus);
+    try {
+      await apiRequestWithRetry("/kursus/request-kursus", {
+        method: "POST",
+        body: {
+          id_siswa: user.user_id,
+          id_kursus: id_kursus,
+        }
+      });
+      setRequestedIds(prev => [...prev, id_kursus]);
+      showToast(`✅ Request ke ${displayName} berhasil dikirim!`);
+    } catch (err) {
+      showToast(`❌ Gagal: ${err.message}`);
+    } finally {
+      setRequestingId(null);
+    }
   }
 
   function showToast(msg) {
@@ -193,16 +220,12 @@ export default function DashboardSiswa() {
     const dekat = KOTA_DEKAT[siswaKota] || [];
     const idx = dekat.indexOf(kota);
     if (idx < 0) return null;
-    if (idx === 0) return "Daerahmu";
-    if (idx <= 2)  return "Dekat";
-    return "Agak Jauh";
   }
 
   const navItems = [
     { id:"overview",  label:"Dashboard"     },
     { id:"find",      label:"Cari Relawan"  },
     { id:"sessions",  label:"Sesi Belajar"  },
-    { id:"progress",  label:"Progress"      },
     { id:"settings",  label:"Pengaturan"    },
   ];
 
@@ -210,7 +233,6 @@ export default function DashboardSiswa() {
     if(id==="overview")  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/></svg>;
     if(id==="find")      return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="8.333" cy="8.333" r="5.833" stroke="currentColor" strokeWidth="1.5"/><path d="M17.5 17.5l-4.167-4.167" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
     if(id==="sessions")  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M17.5 10a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" stroke="currentColor" strokeWidth="1.5"/><path d="M10 5.833V10l3.333 1.667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
-    if(id==="progress")  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M2.5 15l4.167-5.833L10 12.5l3.333-5L17.5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
     if(id==="settings")  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
     return null;
   }
@@ -287,7 +309,6 @@ export default function DashboardSiswa() {
                 <StatCard icon="clock" color="teal"  value="24"  label="Jam Belajar"    />
                 <StatCard icon="star"  color="coral" value="8"   label="Sesi Selesai"   />
                 <StatCard icon="book"  color="blue"  value="3"   label="Mata Pelajaran" />
-                <StatCard icon="chart" color="green" value="85%" label="Progress"       />
               </div>
               <div className={styles.grid2}>
                 <div className={styles.card}>
@@ -315,7 +336,7 @@ export default function DashboardSiswa() {
                           </div>
                           <div className={styles.sInfo}>
                             <p className={styles.sSubj}>{isReal ? s.nama_pelajaran : s.subject}</p>
-                            <p className={styles.sMeta}>dengan {isReal ? s.full_name : s.relawan} • {isReal ? s.waktu_mulai : s.time} • {s.mode}</p>
+                            <p className={styles.sMeta}>{isReal ? s.full_name : s.relawan} • ⏰ {isReal ? s.waktu_mulai?.slice(0,5) : s.time} - {isReal ? s.waktu_selesai?.slice(0,5) : ""} • {s.mode}</p>
                           </div>
                           <span className={`${styles.badge} ${status==="upcoming" ? styles.bUp : styles.bDn}`}>
                             {status==="upcoming" ? "Akan Datang" : "Selesai"}
@@ -336,17 +357,32 @@ export default function DashboardSiswa() {
                     ) : recommendations.length === 0 ? (
                       <div className={styles.empty}>Belum ada relawan yang sesuai minatmu</div>
                     ) : recommendations.map(r => (
-                      <div className={styles.rlRow} key={r.id_kursus}>
+                      <div className={styles.rlCard} key={r.id_kursus} style={{ marginBottom: 12 }}>
                         <div className={styles.avWrap}>
-                          <div className={styles.av} style={{background:"#0F6E56"}}>{getInitials(r.full_name)}</div>
+                          <div className={styles.avLg} style={{background: "#0F6E56"}}>{getInitials(r.full_name)}</div>
                           {r.mode !== "offline" && <OnlineDot />}
                         </div>
-                        <div className={styles.ri}>
-                          <p className={styles.rn}>{r.full_name}</p>
-                          <p className={styles.rx}>{r.nama_pelajaran || r.relawan_exp || "Umum"}</p>
-                          <div className={styles.rm}><ModeTag mode={r.mode || "online"} /> <span>📍 {r.nama_kabupaten || "Luar Kota"}</span></div>
+                        <div className={styles.rfi}>
+                          <div className={styles.rfn}>
+                            {r.nama_pelajaran || "Umum"}
+                            <ModeTag mode={r.mode || "online"} />
+                          </div>
+                          <div className={styles.rfTags}>
+                            <span className={styles.rtag}>{r.full_name}</span>
+                          </div>
+                          <div className={styles.rfs}>
+                            <span>📍 {r.nama_kabupaten || "Luar Kota"}</span>
+                            <span>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})} • ⏰ {r.waktu_mulai?.slice(0,5)} - {r.waktu_selesai?.slice(0,5)}</span>
+                          </div>
                         </div>
-                        <button className={styles.btnOutline} onClick={() => openModal(r)}>Request</button>
+                        <button
+                          className={styles.btnPrimary}
+                          style={{fontSize:11,padding:"5px 12px"}}
+                          onClick={() => handleRequest(r.id_kursus, r.full_name)}
+                          disabled={requestedIds.includes(r.id_kursus) || requestingId === r.id_kursus}
+                        >
+                          {requestedIds.includes(r.id_kursus) ? "✔ Terkirim" : requestingId === r.id_kursus ? "..." : "Request"}
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -365,25 +401,49 @@ export default function DashboardSiswa() {
                 </div>
               </header>
 
-              <div className={styles.searchRow}>
-                <input className={styles.searchInput} placeholder="Cari nama atau mata pelajaran..." value={searchQ} onChange={e => setSearchQ(e.target.value)} />
-                <select className={styles.selInput} value={filterKota} onChange={e => setFilterKota(e.target.value)}>
-                  <option value="">Semua Daerah</option>
-                  {KOTA_LIST.map(k => <option key={k}>{k}</option>)}
-                </select>
-              </div>
+            <div className={styles.searchRow}>
+  {/* SEARCH */}
+  <input
+    className={styles.searchInput}
+    placeholder="Cari nama atau mata pelajaran..."
+    value={searchQ}
+    onChange={e => setSearchQ(e.target.value)}
+  />
+
+  {/* PROVINSI */}
+  <select
+    className={styles.selInput}
+    value={filterProvinsi}
+    onChange={e => {
+      setFilterProvinsi(e.target.value);
+      setFilterKota("");
+    }}
+  >
+    <option value="">Semua Provinsi</option>
+    {provinces.map((prov) => (
+      <option key={prov.id_provinsi} value={prov.id_provinsi}>{prov.nama_provinsi}</option>
+    ))}
+  </select>
+
+  {/* KABUPATEN */}
+  <select
+    className={styles.selInput}
+    value={filterKota}
+    onChange={e => setFilterKota(e.target.value)}
+    disabled={!filterProvinsi}
+  >
+    <option value="">Semua Kabupaten</option>
+    {kabupatens.map((kota) => (
+      <option key={kota.id_kabupaten} value={kota.id_kabupaten}>{kota.nama_kabupaten}</option>
+    ))}
+  </select>
+</div>
 
               <div className={styles.filterRow}>
                 <span className={styles.filterLabel}>Mode:</span>
-                {[{v:"all",label:"Semua"},{v:"online",label:"Online"},{v:"offline",label:"Offline"},{v:"both",label:"Online & Offline"}].map(f => (
+                {[{v:"all",label:"Semua"},{v:"online",label:"Online"},{v:"offline",label:"Offline"},{v:"online & offline",label:"Online & Offline"}].map(f => (
                   <button key={f.v} className={`${styles.fb} ${filterMode===f.v ? styles.faActive:""}`} onClick={() => setFilterMode(f.v)}>{f.label}</button>
                 ))}
-                <span className={styles.filterLabel} style={{marginLeft:8}}>Urutkan:</span>
-                <select className={styles.selInput} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                  <option value="rating">Rating</option>
-                  <option value="dekat">Terdekat</option>
-                  <option value="jam">Jam Terbanyak</option>
-                </select>
               </div>
 
               <div className={styles.rlFull}>
@@ -412,23 +472,28 @@ export default function DashboardSiswa() {
                       </div>
                       <div className={styles.rfi}>
                         <div className={styles.rfn}>
-                          {rName}
+                          {rExp[0]}
                           <ModeTag mode={rMode} />
                           {jarak && <span className={styles.distBadge}>{jarak}</span>}
                         </div>
-                        <div className={styles.rfTags}>{rExp.map(e => <span key={e} className={styles.rtag}>{e}</span>)}</div>
+                        <div className={styles.rfTags}><span className={styles.rtag}>{rName}</span></div>
                         <div className={styles.rfs}>
-                          <span>★ {isReal ? "5.0" : r.rating}</span>
                           <span>📍 {rKota}</span>
                           {isReal ? (
-                            <span>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})} • {r.waktu_mulai}</span>
+                            <span>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})} • ⏰ {r.waktu_mulai.slice(0,5)} - {r.waktu_selesai?.slice(0,5)}</span>
                           ) : (
                             <span>⏱ {r.jam} jam</span>
                           )}
-                          {isSama && bisaOffline && <span className={styles.bisaOffline}>✓ Bisa offline di daerahmu</span>}
                         </div>
                       </div>
-                      <button className={styles.btnPrimary} style={{fontSize:11,padding:"5px 12px"}} onClick={() => openModal(r)}>Request</button>
+                      <button
+                        className={styles.btnPrimary}
+                        style={{fontSize:11,padding:"5px 12px"}}
+                        onClick={() => isReal && handleRequest(r.id_kursus, rName)}
+                        disabled={!isReal || requestedIds.includes(r.id_kursus) || requestingId === r.id_kursus}
+                      >
+                        {requestedIds.includes(r.id_kursus) ? "✔ Terkirim" : requestingId === r.id_kursus ? "..." : "Request"}
+                      </button>
                     </div>
                   );
                 })}
@@ -470,7 +535,7 @@ export default function DashboardSiswa() {
                       </div>
                       <div style={{flex:1}}>
                         <p className={styles.sSubj} style={{fontSize:13}}>{isReal ? s.nama_pelajaran : s.subject}</p>
-                        <p className={styles.sMeta}>dengan {isReal ? s.full_name : s.relawan} • {isReal ? s.waktu_mulai : s.time} WIB • {s.mode}</p>
+                        <p className={styles.sMeta}>dengan {isReal ? s.full_name : s.relawan} • ⏰ {isReal ? s.waktu_mulai?.slice(0,5) : s.time} - {isReal ? s.waktu_selesai?.slice(0,5) : ""} • {s.mode}</p>
                       </div>
                       <span className={`${styles.badge} ${status==="upcoming" ? styles.bUp : styles.bDn}`} style={{marginRight:6}}>
                         {status==="upcoming" ? "Akan Datang" : "Selesai"}
@@ -485,15 +550,7 @@ export default function DashboardSiswa() {
             </div>
           )}
 
-          {/* ══ PROGRESS ══ */}
-          {tab === "progress" && (
-            <div className={styles.pane}>
-              <header className={styles.topBar}>
-                <div><h1 className={styles.pageTitle}>Progress Belajar</h1><p className={styles.pageDesc}>Perkembangan belajarmu per mapel</p></div>
-              </header>
-                <div className={styles.empty}>Progress akan muncul setelah kamu menyelesaikan sesi belajar pertama</div>
-              </div>
-          )}
+
 
           {/* ══ PENGATURAN ══ */}
           {tab === "settings" && (
@@ -525,7 +582,8 @@ export default function DashboardSiswa() {
                     <p className={styles.settDesc}>Digunakan untuk mencari relawan offline terdekat</p>
                   </div>
                   <select className={styles.kotaSel} value={siswaKota} onChange={e => setSiswaKota(e.target.value)}>
-                    {KOTA_LIST.map(k => <option key={k}>{k}</option>)}
+                    <option value="">Pilih Daerah</option>
+                    {kabupatens.map(k => <option key={k.id_kabupaten} value={k.nama_kabupaten}>{k.nama_kabupaten}</option>)}
                   </select>
                 </div>
               </div>
@@ -554,43 +612,6 @@ export default function DashboardSiswa() {
           )}
 
         </main>
-
-        {/* ─── MODAL REQUEST ─── */}
-        {modal && (
-          <div className={styles.modalOverlay} onClick={closeModal}>
-            <div className={styles.modal} onClick={e => e.stopPropagation()}>
-              <p className={styles.modalTitle}>Request ke {modal.id_kursus ? modal.full_name : modal.name}</p>
-              <p className={styles.modalSub}>{modal.id_kursus ? modal.nama_pelajaran : modal.exp.join(" • ")} • {modal.id_kursus ? modal.nama_kabupaten : modal.kota}</p>
-              <div className={styles.mField}>
-                <label className={styles.mLabel}>Mata Pelajaran</label>
-                <select className={styles.mSel}>
-                  {modal.id_kursus ? <option>{modal.nama_pelajaran}</option> : modal.exp.map(e => <option key={e}>{e}</option>)}
-                </select>
-              </div>
-              <div className={styles.mField}>
-                <label className={styles.mLabel}>Mode Sesi</label>
-                <select className={styles.mSel}>
-                  {(modal.mode === "online"  || modal.mode === "both") && <option>Online</option>}
-                  {(modal.mode === "offline" || modal.mode === "both") && <option>Offline</option>}
-                </select>
-              </div>
-              <div className={styles.mField}>
-                <label className={styles.mLabel}>Tanggal</label>
-                <input className={styles.mInput} type="date" defaultValue={modal.tanggal_mengajar ? modal.tanggal_mengajar.split("T")[0] : new Date().toISOString().split("T")[0]} disabled={!!modal.id_kursus} />
-              </div>
-              <div className={styles.mField}>
-                <label className={styles.mLabel}>Jam</label>
-                <select className={styles.mSel} disabled={!!modal.id_kursus}>
-                  {modal.id_kursus ? <option>{modal.waktu_mulai}</option> : ["09:00","10:00","13:00","14:00","15:00","16:00","17:00"].map(t=><option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className={styles.modalFoot}>
-                <button className={styles.fb} onClick={closeModal}>Batal</button>
-                <button className={styles.btnPrimary} onClick={submitRequest}>Kirim Request</button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ─── TOAST ─── */}
         {toastShow && <div className={styles.toastMsg}>{toast}</div>}

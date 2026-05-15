@@ -580,3 +580,66 @@
   .rightPanel { padding: var(--space-6); }
   .fieldRow { grid-template-columns: 1fr; }
 }
+
+/* ===== SISWA THEME OVERRIDES (Green) ===== */
+.siswaPage .leftPanel {
+  background: linear-gradient(135deg, var(--teal-primary) 0%, var(--teal-dark) 50%, #084334 100%);
+}
+
+.siswaPage .nextBtn,
+.siswaPage .btnCoral,
+.siswaPage .subjectChip.chipActive {
+  background: var(--teal-primary);
+}
+
+.siswaPage .nextBtn:hover,
+.siswaPage .btnCoral:hover {
+  background: var(--teal-dark);
+}
+
+.siswaPage .field input:focus,
+.siswaPage .field textarea:focus,
+.siswaPage .field select:focus {
+  border-color: var(--teal-primary);
+  box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.1);
+}
+
+.siswaPage .subjectChip:hover {
+  border-color: var(--teal-primary);
+  color: var(--teal-primary);
+  background: var(--teal-light);
+}
+
+.siswaPage .loginLink a {
+  color: var(--teal-primary);
+}
+
+.siswaPage .doneDot {
+  color: var(--teal-primary);
+}
+
+.siswaPage .pBadge.pOpen {
+  background: var(--teal-light);
+  color: var(--teal-dark);
+}
+
+.siswaPage .periodeSelected {
+  border-color: var(--teal-primary) !important;
+  background: var(--teal-light) !important;
+}
+
+.siswaPage .periodeBannerHd {
+  color: var(--teal-primary);
+}
+
+.siswaPage .periodeBannerHd span {
+  color: var(--teal-dark);
+}
+
+.siswaPage .periodeOpt:hover:not(.periodeClosed) {
+  border-color: var(--teal-primary);
+}
+
+.siswaPage .periodeOpt input[type="radio"] {
+  accent-color: var(--teal-primary);
+}

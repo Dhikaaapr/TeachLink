@@ -244,7 +244,6 @@ export default function DashboardRelawan() {
   const navItems = [
     { id:'overview', label:'Dashboard'   },
     { id:'requests', label:'Permintaan', badge: requests.length },
-    { id:'students', label:'Siswa Saya'  },
     { id:'schedule', label:'Jadwal'      },
     { id:'cert',     label:'Sertifikat'  },
     { id:'settings', label:'Pengaturan'  },
@@ -408,7 +407,7 @@ export default function DashboardRelawan() {
                       <ModeTag mode={r.mode} />
                     </div>
                     <div className={styles.reqBot}>
-                      <span className={styles.reqTime}>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})} • ⏰ {r.waktu_mulai} WIB</span>
+                      <span className={styles.reqTime}>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})} • ⏰ {r.waktu_mulai?.slice(0,5)} - {r.waktu_selesai?.slice(0,5)}</span>
                       <div className={styles.btnRow}>
                         <button className={styles.btnDecline} onClick={() => declineReq(r.id_detail_kursus)}>Tolak</button>
                         <button className={styles.btnAccept}  onClick={() => acceptReq(r.id_detail_kursus)}>Terima</button>
@@ -420,27 +419,7 @@ export default function DashboardRelawan() {
             </div>
           )}
 
-          {/* ══ SISWA SAYA ══ */}
-          {tab === 'students' && (
-            <div className={styles.pane}>
-              <header className={styles.topBar}>
-                <div><h1 className={styles.pageTitle}>Siswa Saya</h1><p className={styles.pageDesc}>{SISWA_DATA.length} siswa aktif</p></div>
-              </header>
-              <div className={styles.siswaList}>
-                {SISWA_DATA.map((s, i) => (
-                  <div key={i} className={styles.siswaCard}>
-                    <div className={styles.av} style={{background:s.col, width:36, height:36}}>{getInitials(s.nama)}</div>
-                    <div className={styles.siInfo}>
-                      <p className={styles.siName}>{s.nama}</p>
-                      <p className={styles.siMeta}>{s.mapel} • {s.sesi}/{s.total} sesi</p>
-                      <div className={styles.progBar}><div className={styles.progFill} style={{width:`${Math.round(s.sesi/s.total*100)}%`}} /></div>
-                    </div>
-                    <span className={styles.progPct}>{Math.round(s.sesi/s.total*100)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          
 
           {/* ══ JADWAL ══ */}
           {tab === 'schedule' && (
@@ -564,17 +543,6 @@ export default function DashboardRelawan() {
                       <button key={m.v} className={`${styles.mb} ${relMode===m.v ? m.cls : ''}`} onClick={() => setRelMode(m.v)}>{m.l}</button>
                     ))}
                   </div>
-                </div>
-
-                {/* Kota */}
-                <div className={styles.settRow}>
-                  <div>
-                    <p className={styles.settLabel}>Daerah Mengajar</p>
-                    <p className={styles.settDesc}>Tampil di hasil pencarian siswa offline di daerahmu</p>
-                  </div>
-                  <select className={styles.kotaSel} value={relKota} onChange={e => setRelKota(e.target.value)}>
-                    {KOTA_LIST.map(k => <option key={k}>{k}</option>)}
-                  </select>
                 </div>
 
                 {/* Mapel */}

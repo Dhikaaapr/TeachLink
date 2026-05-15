@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../register.module.css";
@@ -12,20 +12,93 @@ const subjects = [
   "Kimia", "Biologi", "Sejarah", "Geografi", "Ekonomi", "Komputer"
 ];
 
+const STEP_META = [
+  { label: "Akun",     sub: "Data login"       },
+  { label: "Profil",   sub: "Info pribadi"     },
+  { label: "Pelajaran", sub: "Mapel favorit" },
+];
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M3 7L6 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function StepIndicator({ current }) {
+  return (
+    <div className={styles.stepsIndicator}>
+      {STEP_META.map((s, i) => {
+        const n      = i + 1;
+        const isDone = n < current;
+        const isAct  = n === current;
+        return (
+          <div key={n}>
+            <div className={styles.stepItem}>
+              <div className={`${styles.stepDot} ${isDone ? styles.doneDot : ""} ${isAct ? styles.activeDot : ""}`}>
+                {isDone ? <CheckIcon /> : n}
+              </div>
+              <div className={styles.stepMeta}>
+                <p className={`${styles.stepLabel} ${isAct ? styles.activeLabel : ""} ${isDone ? styles.doneLabel : ""}`}>
+                  {s.label}
+                </p>
+                <p className={`${styles.stepSub} ${isAct ? styles.activeLabel : ""}`}>
+                  {s.sub}
+                </p>
+              </div>
+            </div>
+            {n < 3 && (
+              <div className={`${styles.stepConnector} ${isDone ? styles.doneConn : ""}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function RegisterSiswa() {
   const router = useRouter();
   const { login } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPass: "",
     age: "", phone: "", city: "", school: "",
+    province: "", id_provinsi: "", id_kabupaten: "",
     subjects: [], goals: ""
   });
 
-  const updateForm = (key, val) => setForm({...form, [key]: val});
+  const [provinces, setProvinces] = useState([]);
+  const [kabupatens, setKabupatens] = useState([]);
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await apiRequest("/provinsi/all");
+        if (res.success) setProvinces(res.data || []);
+      } catch (err) { console.error("Failed to fetch provinces", err); }
+    };
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (form.id_provinsi) {
+      const fetchKabupaten = async () => {
+        try {
+          const res = await apiRequest(`/kabupaten/provinsi/${form.id_provinsi}`);
+          if (res.success) setKabupatens(res.data || []);
+        } catch (err) { console.error("Failed to fetch kabupaten", err); }
+      };
+      fetchKabupaten();
+    } else {
+      setKabupatens([]);
+    }
+  }, [form.id_provinsi]);
+
+  const updateForm = (key, val) => setForm(prev => ({...prev, [key]: val}));
 
   const toggleSubject = (subj) => {
     setForm(prev => ({
@@ -55,13 +128,15 @@ export default function RegisterSiswa() {
           password: form.password,
           id_role: ROLES.SISWA,
           nomor_telepon: form.phone || undefined,
+          tanggal_lahir: form.age || undefined,
+          id_provinsi: parseInt(form.id_provinsi) || undefined,
+          id_kabupaten: parseInt(form.id_kabupaten) || undefined,
           institusi: form.school || undefined,
           bidang_keahlian: form.subjects.join(", ") || undefined,
           bio: form.goals || undefined,
         },
       });
 
- 
       // Login otomatis setelah daftar
       await login(form.email, form.password);
       router.push("/dashboard/siswa");
@@ -73,7 +148,7 @@ export default function RegisterSiswa() {
   };
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.siswaPage}`}>
       <div className={styles.leftPanel}>
         <div className={styles.panelContent}>
           <Link href="/" className={styles.backLink}>
@@ -81,33 +156,29 @@ export default function RegisterSiswa() {
             Kembali
           </Link>
           <div className={styles.panelBrand}>
-            <svg width="48" height="48" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="white" fillOpacity="0.15"/><path d="M10 11C10 10.4477 10.4477 10 11 10H17V26H11C10.4477 26 10 25.5523 10 25V11Z" fill="white" opacity="0.9"/><path d="M19 10H25C25.5523 10 26 10.4477 26 11V25C26 25.5523 25.5523 26 25 26H19V10Z" fill="white" opacity="0.7"/><circle cx="22" cy="8" r="3" fill="#D85A30"/></svg>
+            <svg width="48" height="48" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" rx="8" fill="white" fillOpacity="0.15"/>
+              <path d="M10 11C10 10.4477 10.4477 10 11 10H17V26H11C10.4477 26 10 25.5523 10 25V11Z" fill="white" opacity="0.9"/>
+              <path d="M19 10H25C25.5523 10 26 10.4477 26 11V25C26 25.5523 25.5523 26 25 26H19V10Z" fill="white" opacity="0.7"/>
+              <circle cx="22" cy="8" r="3" fill="#0F6E56"/>
+            </svg>
             <h1>Daftar Siswa</h1>
           </div>
           <p className={styles.panelTagline}>Temukan relawan pengajar terbaik untuk membantumu belajar — sepenuhnya gratis!</p>
 
-          {/* Steps indicator */}
-          <div className={styles.stepsIndicator}>
-            {[1,2,3].map(s => (
-              <div key={s} className={`${styles.stepDot} ${step >= s ? styles.activeDot : ""}`}>
-                {step > s ? (
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                ) : s}
-              </div>
-            ))}
-            <div className={styles.stepLine}><div className={styles.stepLineFill} style={{width: `${((step-1)/2)*100}%`}}/></div>
-          </div>
-          <div className={styles.stepLabels}>
-            <span className={step >= 1 ? styles.activeLabel : ""}>Akun</span>
-            <span className={step >= 2 ? styles.activeLabel : ""}>Profil</span>
-            <span className={step >= 3 ? styles.activeLabel : ""}>Pelajaran</span>
-          </div>
+          <StepIndicator current={step} />
         </div>
       </div>
 
       <div className={styles.rightPanel}>
         <div className={styles.formContainer}>
           <form onSubmit={handleSubmit}>
+            {error && (
+              <div style={{padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, color: "#DC2626", fontSize: 13, marginBottom: 16}}>
+                ⚠️ {error}
+              </div>
+            )}
+
             {/* Step 1: Account */}
             {step === 1 && (
               <div className={styles.stepContent}>
@@ -147,26 +218,60 @@ export default function RegisterSiswa() {
                   <h2>Profil Kamu</h2>
                   <p>Bantu kami mengenalmu lebih baik</p>
                 </div>
+                
                 <div className={styles.fields}>
                   <div className={styles.fieldRow}>
                     <div className={styles.field}>
-                      <label>Usia</label>
-                      <input type="number" placeholder="Contoh: 15" value={form.age} onChange={e => updateForm("age", e.target.value)} min="10" max="21" required />
+                      <label>Tanggal Lahir</label>
+                      <input type="date" value={form.age} onChange={e => updateForm("age", e.target.value)} required />
                     </div>
                     <div className={styles.field}>
                       <label>No. Telepon</label>
                       <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => updateForm("phone", e.target.value)} />
                     </div>
                   </div>
-                  <div className={styles.field}>
-                    <label>Kota / Kabupaten</label>
-                    <input type="text" placeholder="Contoh: Jakarta Selatan" value={form.city} onChange={e => updateForm("city", e.target.value)} required />
+                  
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field} style={{ position: "relative", zIndex: 5 }}>
+                      <label>Provinsi</label>
+                      <select
+                        value={form.id_provinsi}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          updateForm("id_provinsi", id);
+                          updateForm("id_kabupaten", "");
+                        }}
+                        required
+                      >
+                        <option value="">Pilih Provinsi</option>
+                        {provinces.map(p => (
+                          <option key={p.id_provinsi} value={p.id_provinsi}>{p.nama_provinsi}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.field} style={{ position: "relative", zIndex: 5 }}>
+                      <label>Kabupaten</label>
+                      <select
+                        value={form.id_kabupaten}
+                        onChange={(e) => updateForm("id_kabupaten", e.target.value)}
+                        required
+                        disabled={!form.id_provinsi}
+                      >
+                        <option value="">Pilih Kabupaten</option>
+                        {kabupatens.map(k => (
+                          <option key={k.id_kabupaten} value={k.id_kabupaten}>{k.nama_kabupaten}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
                   <div className={styles.field}>
                     <label>Nama Sekolah (opsional)</label>
                     <input type="text" placeholder="Kosongkan jika tidak bersekolah" value={form.school} onChange={e => updateForm("school", e.target.value)} />
                   </div>
                 </div>
+
                 <div className={styles.btnRow}>
                   <button type="button" className={`btn btn-outline ${styles.backBtn}`} onClick={() => setStep(1)}>Kembali</button>
                   <button type="button" className={`btn btn-primary ${styles.nextBtn}`} onClick={() => setStep(3)}>

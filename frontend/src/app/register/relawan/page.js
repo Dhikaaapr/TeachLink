@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../register.module.css";
@@ -141,7 +141,35 @@ export default function RegisterRelawan() {
     phone: "", city: "", occupation: "", institution: "",
     expertise: [], motivation: "",
     selectedPeriode: null, mode: "",
+    id_provinsi: "", id_kabupaten: "",
   });
+
+  const [provinces, setProvinces] = useState([]);
+  const [kabupatens, setKabupatens] = useState([]);
+
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const res = await apiRequest("/provinsi/all");
+        if (res.success) setProvinces(res.data || []);
+      } catch (err) { console.error("Failed to fetch provinces", err); }
+    };
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (form.id_provinsi) {
+      const fetchKabupaten = async () => {
+        try {
+          const res = await apiRequest(`/kabupaten/provinsi/${form.id_provinsi}`);
+          if (res.success) setKabupatens(res.data || []);
+        } catch (err) { console.error("Failed to fetch kabupaten", err); }
+      };
+      fetchKabupaten();
+    } else {
+      setKabupatens([]);
+    }
+  }, [form.id_provinsi]);
 
   const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -177,6 +205,8 @@ export default function RegisterRelawan() {
           nomor_telepon: form.phone || undefined,
           pekerjaan: form.occupation || undefined,
           institusi: form.institution || undefined,
+          id_provinsi: parseInt(form.id_provinsi) || undefined,
+          id_kabupaten: parseInt(form.id_kabupaten) || undefined,
           bidang_keahlian: form.expertise.join(", ") || undefined,
           bio: form.motivation || undefined,
         },
@@ -315,6 +345,7 @@ export default function RegisterRelawan() {
                   <h2>Profil relawan</h2>
                   <p>Informasi untuk verifikasi dan pencocokan</p>
                 </div>
+                
                 <div className={styles.fields}>
                   <div className={styles.fieldRow}>
                     <div className={styles.field}>
@@ -322,12 +353,7 @@ export default function RegisterRelawan() {
                       <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => update("phone", e.target.value)} required />
                     </div>
                     <div className={styles.field}>
-                      <label>Kota / Kabupaten</label>
-                      <input type="text" placeholder="Contoh: Bandung" value={form.city} onChange={e => update("city", e.target.value)} required />
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <label>Pekerjaan / Status</label>
+                      <label>Pekerjaan / Status</label>
                     <select value={form.occupation} onChange={e => update("occupation", e.target.value)} required>
                       <option value="">Pilih status</option>
                       <option value="mahasiswa">Mahasiswa</option>
@@ -337,10 +363,47 @@ export default function RegisterRelawan() {
                       <option value="lainnya">Lainnya</option>
                     </select>
                   </div>
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <div className={styles.field} style={{ position: "relative", zIndex: 5 }}>
+                      <label>Provinsi</label>
+                      <select
+                        value={form.id_provinsi}
+                        onChange={(e) => {
+                          update("id_provinsi", e.target.value);
+                          update("id_kabupaten", "");
+                        }}
+                        required
+                      >
+                        <option value="">Pilih Provinsi</option>
+                        {provinces.map(p => (
+                          <option key={p.id_provinsi} value={p.id_provinsi}>{p.nama_provinsi}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.field} style={{ position: "relative", zIndex: 5 }}>
+                      <label>Kabupaten </label>
+                      <select
+                        value={form.id_kabupaten}
+                        onChange={(e) => update("id_kabupaten", e.target.value)}
+                        required
+                        disabled={!form.id_provinsi}
+                      >
+                        <option value="">Pilih Kabupaten</option>
+                        {kabupatens.map(k => (
+                          <option key={k.id_kabupaten} value={k.id_kabupaten}>{k.nama_kabupaten}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   <div className={styles.field}>
                     <label>Institusi / Kampus</label>
                     <input type="text" placeholder="Contoh: Universitas Indonesia" value={form.institution} onChange={e => update("institution", e.target.value)} />
                   </div>
+                  
                   <div className={styles.field}>
                     <label>Upload KTP / KTM</label>
                     <div className={styles.uploadArea}>
