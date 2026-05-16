@@ -19,7 +19,25 @@ const ALL_MAPEL  = ['Matematika','Fisika','Kimia','Biologi','Bahasa Inggris','Se
 const SESI_TIMES = [{ s:'15:00', e:'16:30' }, { s:'17:00', e:'18:00' }];
 const AV_COLORS  = ['#D85A30','#185FA5','#BA7517','#1D9E75','#993556','#534AB7'];
 
-/* ─────────────── DATA ─────────────── */
+const MAPEL_OPTIONS = [
+  { id: 1, label: 'Matematika',    icon: '∑' },
+  { id: 2, label: 'Bahasa Inggris', icon: 'Aa' },
+  { id: 3, label: 'Fisika',        icon: '⚛' },
+  { id: 4, label: 'Kimia',         icon: '⚗' },
+  { id: 5, label: 'Biologi',       icon: '🌿' },
+  { id: 6, label: 'Sejarah',       icon: '📜' },
+];
+
+const MAPEL_COLOR = {
+  1: { bg: 'var(--coral-light)', color: 'var(--coral)' },
+  2: { bg: 'var(--blue-light)',  color: 'var(--blue)'  },
+  3: { bg: 'var(--teal-light)',  color: 'var(--teal)'  },
+  4: { bg: 'var(--amber-light)', color: 'var(--amber)' },
+  5: { bg: 'var(--green-light)', color: 'var(--green)' },
+  6: { bg: 'var(--gray-100)',    color: 'var(--gray-500)' },
+};
+
+/* ─────────────── DATA MOCK ─────────────── */
 const TODAY_SESSIONS = [
   {
     mapel:'Matematika', sesi:1, jam:'15:00', end:'16:30', mode:'Online',
@@ -31,15 +49,6 @@ const TODAY_SESSIONS = [
     gmeet:'meet.google.com/ghi-jkl',
     siswa:[{n:'Maya Sari',c:'#D85A30'},{n:'Dina Kusuma',c:'#1D9E75'}],
   },
-];
-
-const SISWA_DATA = [
-  { nama:'Rafi Ahmad',   mapel:'Matematika', sesi:8,  total:12, col:'#D85A30' },
-  { nama:'Dina Kusuma',  mapel:'Fisika',     sesi:5,  total:12, col:'#185FA5' },
-  { nama:'Bima Putra',   mapel:'Matematika', sesi:11, total:12, col:'#BA7517' },
-  { nama:'Aisyah Nur',   mapel:'Fisika',     sesi:7,  total:12, col:'#1D9E75' },
-  { nama:'Maya Sari',    mapel:'Sejarah',    sesi:4,  total:12, col:'#993556' },
-  { nama:'Farhan H.',    mapel:'Matematika', sesi:2,  total:12, col:'#3B6D11' },
 ];
 
 const CERT_DATA = [
@@ -59,8 +68,21 @@ function getInitials(name) {
   return name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
 }
 function avColor(i) { return AV_COLORS[i % AV_COLORS.length]; }
-
 function getDayName(d) { return ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d]; }
+
+function getDurMins(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm);
+}
+
+function fmtDur(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (m === 0) return `${h} jam`;
+  return `${h} jam ${m} menit`;
+}
 
 function getScheduleWeeks(month, year) {
   const sessions = [];
@@ -90,6 +112,263 @@ function ModeTag({ mode }) {
   return <span className={styles.mBoth}>Online & Offline</span>;
 }
 
+/* ─────────────── TAMBAH/EDIT MODAL ─────────────── */
+const EMPTY_FORM = {
+  id_pelajaran: 1,
+  tanggal_mengajar: new Date().toISOString().split('T')[0],
+  waktu_mulai: '15:00',
+  waktu_selesai: '16:30',
+  mode: 'online',
+  url_gmeet: '',
+  lokasi_offline: '',
+};
+
+function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (isOpen) {
+      if (editData) {
+        setForm({
+          id_pelajaran:    editData.id_pelajaran || 1,
+          tanggal_mengajar: editData.tanggal_mengajar
+            ? new Date(editData.tanggal_mengajar).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
+          waktu_mulai:  editData.waktu_mulai?.slice(0,5) || '15:00',
+          waktu_selesai: editData.waktu_selesai?.slice(0,5) || '16:30',
+          mode:     editData.mode || 'online',
+          url_gmeet: editData.url_gmeet || '',
+          lokasi_offline: editData.lokasi_offline || '',
+        });
+      } else {
+        setForm(EMPTY_FORM);
+      }
+      setErrors({});
+    }
+  }, [isOpen, editData]);
+
+  const durMins = getDurMins(form.waktu_mulai, form.waktu_selesai);
+  const durValid = durMins >= 60 && durMins <= 180;
+
+  function validate() {
+    const e = {};
+    if (!form.waktu_mulai)  e.waktu_mulai  = 'Waktu mulai wajib diisi';
+    if (!form.waktu_selesai) e.waktu_selesai = 'Waktu selesai wajib diisi';
+    if (form.waktu_mulai && form.waktu_selesai) {
+      const d = getDurMins(form.waktu_mulai, form.waktu_selesai);
+      if (d <= 0)   e.waktu_selesai = 'Waktu selesai harus setelah waktu mulai';
+      else if (d < 60)  e.waktu_selesai = 'Durasi minimal 1 jam';
+      else if (d > 180) e.waktu_selesai = 'Durasi maksimal 3 jam';
+    }
+    if (form.mode === 'online' && !form.url_gmeet.trim()) {
+      e.url_gmeet = 'Link Google Meet wajib diisi untuk mode online';
+    }
+    if (form.mode === 'offline' && !form.lokasi_offline.trim()) {
+      e.lokasi_offline = 'Lokasi tempat mengajar wajib diisi untuk mode offline';
+    }
+    return e;
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    onSubmit({ ...form, id_pelajaran: parseInt(form.id_pelajaran) });
+  }
+
+  function set(field, val) {
+    setForm(prev => {
+      const next = { ...prev, [field]: val };
+      if (field === 'mode' && val === 'offline') next.url_gmeet = '';
+      if (field === 'mode' && val === 'online') next.lokasi_offline = '';
+      return next;
+    });
+    setErrors(prev => ({ ...prev, [field]: undefined }));
+  }
+
+  if (!isOpen) return null;
+
+  const durColor = durMins <= 0 ? 'var(--gray-400)'
+    : !durValid && durMins < 60 ? 'var(--amber)'
+    : !durValid && durMins > 180 ? '#E24B4A'
+    : 'var(--teal)';
+  const durBg = durMins <= 0 ? 'var(--gray-100)'
+    : !durValid && durMins < 60 ? 'var(--amber-light)'
+    : !durValid && durMins > 180 ? '#FCEBEB'
+    : 'var(--teal-light)';
+
+  return (
+    <div className={styles.modalOverlay} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <div className={styles.modalHead}>
+          <div>
+            <h2 className={styles.modalTitle}>{editData ? 'Edit Jadwal' : 'Tambah Jadwal Mengajar'}</h2>
+            <p className={styles.modalSub}>Pilih mata pelajaran, atur waktu, dan isi link GMeet-mu</p>
+          </div>
+          <button className={styles.modalClose} onClick={onClose} aria-label="Tutup">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className={styles.modalForm}>
+
+          {/* ── Mata Pelajaran dropdown ── */}
+          <div className={styles.mField}>
+            <label className={styles.mLabel}>Mata Pelajaran</label>
+            <select
+              className={styles.mInput}
+              value={form.id_pelajaran}
+              onChange={e => set('id_pelajaran', parseInt(e.target.value))}
+            >
+              {MAPEL_OPTIONS.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.icon}  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ── Tanggal ── */}
+          <div className={styles.mField}>
+            <label className={styles.mLabel}>Tanggal Mengajar</label>
+            <input
+              type="date"
+              className={styles.mInput}
+              value={form.tanggal_mengajar}
+              onChange={e => set('tanggal_mengajar', e.target.value)}
+              required
+            />
+          </div>
+
+          {/* ── Waktu mulai & selesai ── */}
+          <div className={styles.mGrid}>
+            <div className={styles.mField}>
+              <label className={styles.mLabel}>Waktu Mulai</label>
+              <input
+                type="time"
+                className={`${styles.mInput} ${errors.waktu_mulai ? styles.mInputErr : ''}`}
+                value={form.waktu_mulai}
+                onChange={e => set('waktu_mulai', e.target.value)}
+                required
+              />
+              {errors.waktu_mulai && <p className={styles.mErr}>{errors.waktu_mulai}</p>}
+            </div>
+            <div className={styles.mField}>
+              <label className={styles.mLabel}>Waktu Selesai</label>
+              <input
+                type="time"
+                className={`${styles.mInput} ${errors.waktu_selesai ? styles.mInputErr : ''}`}
+                value={form.waktu_selesai}
+                onChange={e => set('waktu_selesai', e.target.value)}
+                required
+              />
+              {errors.waktu_selesai && <p className={styles.mErr}>{errors.waktu_selesai}</p>}
+            </div>
+          </div>
+
+          {/* ── Durasi indicator ── */}
+          {form.waktu_mulai && form.waktu_selesai && (
+            <div className={styles.durBox} style={{ background: durBg, borderColor: durColor }}>
+              <span style={{ fontSize: 14 }}>{durValid ? '✓' : durMins > 180 ? '⚠' : '○'}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: durColor }}>
+                {durMins > 0
+                  ? `Durasi: ${fmtDur(durMins)}${!durValid ? (durMins < 60 ? ' — minimal 1 jam' : ' — maksimal 3 jam') : ''}`
+                  : 'Waktu selesai harus setelah waktu mulai'}
+              </span>
+            </div>
+          )}
+
+          {/* ── Mode Mengajar ── */}
+          <div className={styles.mField}>
+            <label className={styles.mLabel}>Mode Mengajar</label>
+            <div className={styles.modeBtnRow}>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${form.mode === 'online' ? styles.modeBtnOnActive : ''}`}
+                onClick={() => set('mode', 'online')}
+              >
+                <span>🌐</span> Online
+              </button>
+              <button
+                type="button"
+                className={`${styles.modeBtn} ${form.mode === 'offline' ? styles.modeBtnOffActive : ''}`}
+                onClick={() => set('mode', 'offline')}
+              >
+                <span>📍</span> Offline
+              </button>
+            </div>
+          </div>
+
+          {/* ── Google Meet link (hanya muncul kalau online) ── */}
+          {form.mode === 'online' && (
+            <div className={styles.mField}>
+              <label className={styles.mLabel}>Link Google Meet</label>
+              <div className={`${styles.gmeetInputWrap} ${errors.url_gmeet ? styles.gmeetInputErr : ''}`}>
+                <span className={styles.gmeetPrefix}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.5 8.5L19 5v14l-3.5-3.5V13l-8 4V7l8 4V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <rect x="2" y="7" width="9" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  className={styles.gmeetInput}
+                  placeholder="meet.google.com/xxx-yyy-zzz"
+                  value={form.url_gmeet}
+                  onChange={e => set('url_gmeet', e.target.value)}
+                />
+                {form.url_gmeet && (
+                  <a
+                    href={`https://${form.url_gmeet.replace(/^https?:\/\//, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.gmeetTestBtn}
+                  >
+                    Tes ↗
+                  </a>
+                )}
+              </div>
+              {errors.url_gmeet && <p className={styles.mErr}>{errors.url_gmeet}</p>}
+              <p className={styles.gmeetHint}>Contoh: meet.google.com/abc-def-ghi</p>
+            </div>
+          )}
+
+          {/* ── Lokasi tempat mengajar (hanya muncul kalau offline) ── */}
+          {form.mode === 'offline' && (
+            <div className={styles.mField}>
+              <label className={styles.mLabel}>Lokasi Tempat Mengajar</label>
+              <div className={`${styles.lokasiInputWrap} ${errors.lokasi_offline ? styles.gmeetInputErr : ''}`}>
+                <span className={styles.gmeetPrefix}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  className={styles.gmeetInput}
+                  placeholder="cth: Perpustakaan Depok, Rumah siswa, dll."
+                  value={form.lokasi_offline}
+                  onChange={e => set('lokasi_offline', e.target.value)}
+                />
+              </div>
+              {errors.lokasi_offline && <p className={styles.mErr}>{errors.lokasi_offline}</p>}
+              <p className={styles.gmeetHint}>Isi dengan nama tempat atau alamat lengkap</p>
+            </div>
+          )}
+
+          {/* ── Footer ── */}
+          <div className={styles.modalFoot}>
+            <button type="button" className={styles.btnOutline} onClick={onClose}>Batal</button>
+            <button type="submit" className={styles.btnCoral} disabled={loading}>
+              {loading ? 'Menyimpan...' : editData ? 'Simpan Perubahan' : 'Tambah Jadwal'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────── KOMPONEN UTAMA ─────────────── */
 export default function DashboardRelawan() {
   const { user, logout, loading: authLoading } = useAuth();
@@ -104,51 +383,39 @@ export default function DashboardRelawan() {
   const [requests, setRequests] = useState(INIT_REQUESTS);
   const [reqFilter, setReqFilter] = useState('all');
 
-  // Pengaturan relawan
   const [isOnline, setIsOnline]     = useState(true);
   const [relMode, setRelMode]       = useState('online');
   const [relKota, setRelKota]       = useState('Jakarta Selatan');
   const [mapelActive, setMapelActive] = useState(['Matematika','Fisika']);
 
-  // Jadwal
   const [curMonth, setCurMonth] = useState(3);
 
-  // Toast
   const [toast, setToast]         = useState('');
   const [toastShow, setToastShow] = useState(false);
   const [settToast, setSettToast] = useState('');
   const [settToastShow, setSettToastShow] = useState(false);
 
-  // Real Data State
-  const [realRequests, setRealRequests] = useState([]);
-  const [loadingReqs, setLoadingReqs] = useState(false);
-
+  /* ── Real data ── */
+  const [realRequests, setRealRequests]         = useState([]);
+  const [loadingReqs, setLoadingReqs]           = useState(false);
   const [realKursusCreated, setRealKursusCreated] = useState([]);
-  const [loadingKursus, setLoadingKursus] = useState(false);
+  const [loadingKursus, setLoadingKursus]       = useState(false);
 
-  // New Kursus Form State
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  /* ── Modal state ── */
+  const [showModal, setShowModal]   = useState(false);
+  const [editData, setEditData]     = useState(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    id_pelajaran: 1,
-    tanggal_mengajar: new Date().toISOString().split('T')[0],
-    waktu_mulai: '15:00',
-    waktu_selesai: '16:30',
-    mode: 'online'
-  });
 
-  // Fetch real requests
+  /* ── Fetch requests ── */
   useEffect(() => {
     if (user?.user_id) {
       const fetchRequests = async () => {
         setLoadingReqs(true);
         try {
           const res = await apiRequestWithRetry(`/kursus/requests?id_relawan=${user.user_id}&keterangan=ALL`);
-          if (res.success) {
-            setRealRequests(res.data || []);
-          }
+          if (res.success) setRealRequests(res.data || []);
         } catch (err) {
-          console.error("Failed to fetch requests:", err);
+          console.error('Failed to fetch requests:', err);
         } finally {
           setLoadingReqs(false);
         }
@@ -157,41 +424,45 @@ export default function DashboardRelawan() {
     }
   }, [user]);
 
+  /* ── Fetch kursus yang dibuat relawan ── */
   const fetchCreatedKursus = useCallback(async () => {
     if (!user?.user_id) return;
     setLoadingKursus(true);
     try {
       const res = await apiRequestWithRetry(`/kursus/relawan/${user.user_id}`);
-      if (res.success) {
-        setRealKursusCreated(res.data || []);
-      }
+      if (res.success) setRealKursusCreated(res.data || []);
     } catch (err) {
-      console.error("Failed to fetch created kursus:", err);
+      console.error('Failed to fetch created kursus:', err);
     } finally {
       setLoadingKursus(false);
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchCreatedKursus();
-  }, [fetchCreatedKursus]);
+  useEffect(() => { fetchCreatedKursus(); }, [fetchCreatedKursus]);
 
-  async function handleCreateKursus(e) {
-    e.preventDefault();
+  /* ── CRUD handlers ── */
+  async function handleSubmitJadwal(formData) {
     setFormLoading(true);
     try {
-      const res = await apiRequestWithRetry('/kursus/kursus', {
-        method: 'POST',
-        body: {
-          ...formData,
-          id_relawan: user.user_id,
-          id_pelajaran: parseInt(formData.id_pelajaran)
-        }
-      });
+      let res;
+      if (editData) {
+        res = await apiRequestWithRetry(`/kursus/kursus/${editData.id_kursus}`, {
+          method: 'PATCH',
+          body: { ...formData, id_relawan: user.user_id },
+        });
+      } else {
+        res = await apiRequestWithRetry('/kursus/kursus', {
+          method: 'POST',
+          body: { ...formData, id_relawan: user.user_id },
+        });
+      }
       if (res.success) {
-        showToast("Jadwal mengajar berhasil ditambahkan!");
-        setShowCreateModal(false);
+        showToast(editData ? 'Jadwal berhasil diperbarui!' : 'Jadwal berhasil ditambahkan!');
+        setShowModal(false);
+        setEditData(null);
         fetchCreatedKursus();
+      } else {
+        showToast(`Gagal: ${res.message || 'Terjadi kesalahan'}`);
       }
     } catch (err) {
       showToast(`Gagal: ${err.message}`);
@@ -200,9 +471,28 @@ export default function DashboardRelawan() {
     }
   }
 
-  /* Filtered requests */
-  const displayRequests = tab === 'overview' ? realRequests.slice(0, 3) : 
-                        (reqFilter === 'all' ? realRequests : realRequests.filter(r => r.mode === reqFilter));
+  async function handleDeleteJadwal(id_kursus) {
+    if (!confirm('Hapus jadwal ini?')) return;
+    try {
+      const res = await apiRequestWithRetry(`/kursus/kursus/${id_kursus}`, { method: 'DELETE' });
+      if (res.success) {
+        setRealKursusCreated(prev => prev.filter(j => j.id_kursus !== id_kursus));
+        showToast('Jadwal berhasil dihapus');
+      } else {
+        showToast(`Gagal menghapus: ${res.message}`);
+      }
+    } catch (err) {
+      showToast(`Gagal: ${err.message}`);
+    }
+  }
+
+  function openAddModal() { setEditData(null); setShowModal(true); }
+  function openEditModal(kursus) { setEditData(kursus); setShowModal(true); }
+
+  /* ── Requests ── */
+  const displayRequests = tab === 'overview'
+    ? realRequests.slice(0, 3)
+    : reqFilter === 'all' ? realRequests : realRequests.filter(r => r.mode === reqFilter);
 
   const displayKursus = realKursusCreated.length > 0 ? realKursusCreated : TODAY_SESSIONS;
 
@@ -216,15 +506,14 @@ export default function DashboardRelawan() {
       const res = await apiRequestWithRetry(`/kursus/acc/${id}`, { method: 'PATCH' });
       if (res.success) {
         setRealRequests(prev => prev.filter(x => x.id_detail_kursus !== id));
-        showToast(`Request berhasil dikonfirmasi!`);
+        showToast('Request berhasil dikonfirmasi!');
       }
     } catch (err) {
       showToast(`Gagal: ${err.message}`);
     }
   }
+
   async function declineReq(id) {
-    // Note: Backend might need a specific decline endpoint or we just leave it for now
-    // If no decline endpoint, we just filter it out locally for mock effect or implement later
     setRealRequests(prev => prev.filter(x => x.id_detail_kursus !== id));
     showToast('Permintaan ditolak.');
   }
@@ -242,16 +531,26 @@ export default function DashboardRelawan() {
   const scheduleWeeks = getScheduleWeeks(curMonth, 2026);
 
   const navItems = [
-    { id:'overview', label:'Dashboard'   },
-    { id:'requests', label:'Permintaan', badge: requests.length },
-    { id:'schedule', label:'Jadwal'      },
-    { id:'cert',     label:'Sertifikat'  },
-    { id:'settings', label:'Pengaturan'  },
+    { id:'overview', label:'Dashboard' },
+    { id:'requests', label:'Permintaan', badge: realRequests.length || requests.length },
+    { id:'schedule', label:'Jadwal' },
+    { id:'cert',     label:'Sertifikat' },
+    { id:'settings', label:'Pengaturan' },
   ];
+
+  /* ── Helper: format tanggal untuk blok kecil ── */
+  function fmtDateBlock(dateStr) {
+    const d = new Date(dateStr);
+    return {
+      day:   d.toLocaleDateString('id-ID', { day: 'numeric' }),
+      month: d.toLocaleDateString('id-ID', { month: 'short' }),
+    };
+  }
 
   return (
     <ProtectedRoute allowedRoles={["relawan"]}>
       <div className={styles.layout}>
+
         {/* ─── SIDEBAR ─── */}
         <aside className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
@@ -266,7 +565,11 @@ export default function DashboardRelawan() {
           </div>
           <nav className={styles.sideNav}>
             {navItems.map(item => (
-              <button key={item.id} className={`${styles.navItem} ${tab===item.id?styles.active:''}`} onClick={() => setTab(item.id)}>
+              <button
+                key={item.id}
+                className={`${styles.navItem} ${tab === item.id ? styles.active : ''}`}
+                onClick={() => setTab(item.id)}
+              >
                 <NavIcon id={item.id} />
                 {item.label}
                 {item.badge ? <span className={styles.navBadge}>{item.badge}</span> : null}
@@ -276,7 +579,9 @@ export default function DashboardRelawan() {
           <div className={styles.sidebarFooter}>
             <div className={styles.userInfo}>
               <div className={styles.avWrap}>
-                <div className={styles.av} style={{background:'#D85A30'}}>{user?.full_name ? user.full_name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : 'U'}</div>
+                <div className={styles.av} style={{ background: '#D85A30', width: 32, height: 32, fontSize: 11 }}>
+                  {user?.full_name ? user.full_name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : 'U'}
+                </div>
                 {isOnline && <span className={styles.onlineDot} />}
               </div>
               <div>
@@ -284,8 +589,14 @@ export default function DashboardRelawan() {
                 <p className={styles.userRole}>{relKota}</p>
               </div>
             </div>
-            <button onClick={handleLogout} style={{background:'none',border:'none',cursor:'pointer',padding:4,color:'var(--gray-400)',display:'flex',alignItems:'center'}} title="Logout">
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M7.5 17.5H4.167A1.667 1.667 0 012.5 15.833V4.167A1.667 1.667 0 014.167 2.5H7.5M13.333 14.167L17.5 10l-4.167-4.167M17.5 10H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <button
+              onClick={handleLogout}
+              style={{ background:'none',border:'none',cursor:'pointer',padding:4,color:'var(--gray-400)',display:'flex',alignItems:'center' }}
+              title="Logout"
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <path d="M7.5 17.5H4.167A1.667 1.667 0 012.5 15.833V4.167A1.667 1.667 0 014.167 2.5H7.5M13.333 14.167L17.5 10l-4.167-4.167M17.5 10H7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
           </div>
         </aside>
@@ -299,21 +610,26 @@ export default function DashboardRelawan() {
               <header className={styles.topBar}>
                 <div>
                   <h1 className={styles.pageTitle}>Halo, Kak {user?.full_name?.split(' ')[0] || 'User'}! 🧡</h1>
-                  <p className={styles.pageDesc}>{new Date().toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'short', year:'numeric'})} · {displayKursus.length} sesi terdaftar</p>
+                  <p className={styles.pageDesc}>
+                    {new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'short', year:'numeric' })}
+                    {' · '}{displayKursus.length} sesi terdaftar
+                  </p>
                 </div>
-                <div style={{display:'flex', gap: 12, alignItems:'center'}}>
-                  <button className={styles.btnCoral} onClick={() => setShowCreateModal(true)}>+ Tambah Jadwal</button>
+                <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+                  <button className={styles.btnCoral} onClick={openAddModal}>+ Tambah Jadwal</button>
                   <div className={styles.modePill}>
                     <ModeTag mode={relMode} />
                     <span className={styles.kotaText}>📍 {relKota}</span>
                   </div>
                 </div>
               </header>
+
               <div className={styles.statsGrid}>
-                <StatCard icon="users" color="teal"  value="12"            label="Siswa Aktif"   />
-                <StatCard icon="star"  color="amber" value="4.9"           label="Rating"        />
-                <StatCard icon="chat"  color="blue"  value={requests.length} label="Request Masuk" />
+                <StatCard icon="users" color="teal"  value="12"                   label="Siswa Aktif"   />
+                <StatCard icon="star"  color="amber" value="4.9"                  label="Rating"        />
+                <StatCard icon="chat"  color="blue"  value={realRequests.length || requests.length} label="Request Masuk" />
               </div>
+
               <div className={styles.grid2}>
                 {/* Sesi hari ini */}
                 <div className={styles.card}>
@@ -327,28 +643,56 @@ export default function DashboardRelawan() {
                     <div className={styles.empty}>Belum ada sesi</div>
                   ) : displayKursus.slice(0, 3).map((s, i) => {
                     const isReal = !!s.id_kursus;
+                    const dateInfo = isReal ? fmtDateBlock(s.tanggal_mengajar) : null;
+                    const accentColor = i === 0 ? 'var(--coral)' : 'var(--teal)';
+                    const accentBg    = i === 0 ? 'var(--coral-light)' : 'var(--teal-light)';
+                    const accentMid   = i === 0 ? '#F0997B' : '#5DCAA5';
+
                     return (
                       <div key={isReal ? `real-s-${s.id_kursus}` : `mock-s-${i}`} className={styles.todayCard}>
-                        <div className={styles.timeBlock} style={{background: i===0?'var(--coral-light)':'var(--teal-light)'}}>
-                          <p className={styles.timeVal} style={{color: i===0?'var(--coral)':'var(--teal)'}}>{isReal ? s.waktu_mulai : s.jam}</p>
-                          <p className={styles.timeWib} style={{color: i===0?'#F0997B':'#5DCAA5'}}>WIB</p>
+                        {/* ── blok kiri: tanggal (real) atau jam (mock) ── */}
+                        <div className={styles.timeBlock} style={{ background: accentBg }}>
+                          {isReal ? (
+                            <>
+                              <p className={styles.timeDay}  style={{ color: accentColor }}>{dateInfo.day}</p>
+                              <p className={styles.timeMon}  style={{ color: accentMid  }}>{dateInfo.month}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className={styles.timeVal} style={{ color: accentColor }}>{s.jam}</p>
+                              <p className={styles.timeWib} style={{ color: accentMid  }}>WIB</p>
+                            </>
+                          )}
                         </div>
+
                         <div className={styles.todayBody}>
-                          <p className={styles.todayMapel}>{isReal ? s.nama_pelajaran : s.mapel} — {isReal ? new Date(s.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'}) : `Sesi ${s.sesi}`}</p>
-                          <p className={styles.todayMeta}>{s.mode} • {isReal ? `${s.waktu_mulai}–${s.waktu_selesai}` : `${s.jam}–${s.end}`}</p>
+                          {/* nama mapel saja — tanggal sudah di blok kiri */}
+                          <p className={styles.todayMapel}>
+                            {isReal ? s.nama_pelajaran : `${s.mapel} — Sesi ${s.sesi}`}
+                          </p>
+                          <p className={styles.todayMeta}>
+                            {s.mode} • {isReal
+                              ? `${s.waktu_mulai?.slice(0,5)}–${s.waktu_selesai?.slice(0,5)}`
+                              : `${s.jam}–${s.end}`}
+                          </p>
                           <div className={styles.siswaChips}>
                             {isReal ? (
-                              <span className={styles.siswaChip} style={{background:'var(--teal-light)',color:'var(--teal-dark)'}}>{s.full_name}</span>
-                            ) : s.siswa.map((sw,j) => (
-                              <span key={j} className={styles.siswaChip} style={{background:'var(--teal-light)',color:'var(--teal-dark)'}}>{sw.n}</span>
+                              <span className={styles.siswaChip} style={{ background:'var(--teal-light)', color:'var(--teal-dark)' }}>{s.full_name}</span>
+                            ) : s.siswa.map((sw, j) => (
+                              <span key={j} className={styles.siswaChip} style={{ background:'var(--teal-light)', color:'var(--teal-dark)' }}>{sw.n}</span>
                             ))}
                           </div>
-                          <a href={`https://${isReal ? (s.url_gmeet || "meet.google.com") : s.gmeet}`} target="_blank" rel="noreferrer" className={styles.meetLink}>▶ Buka Meet</a>
+                          <a
+                            href={`https://${isReal ? (s.url_gmeet || 'meet.google.com') : s.gmeet}`}
+                            target="_blank" rel="noreferrer"
+                            className={styles.meetLink}
+                          >▶ Buka Meet</a>
                         </div>
                       </div>
                     );
                   })}
                 </div>
+
                 {/* Request terbaru */}
                 <div className={styles.card}>
                   <div className={styles.cardHeader}>
@@ -361,14 +705,17 @@ export default function DashboardRelawan() {
                     <div className={styles.empty}>Belum ada request</div>
                   ) : realRequests.slice(0, 3).map((r, i) => (
                     <div key={r.id_detail_kursus} className={styles.reqMiniCard}>
-                      <div className={styles.av} style={{background: avColor(i), width:32, height:32, fontSize:10}}>{getInitials(r.full_name)}</div>
+                      <div className={styles.av} style={{ background: avColor(i), width:32, height:32, fontSize:10 }}>{getInitials(r.full_name)}</div>
                       <div className={styles.reqMiniInfo}>
                         <p className={styles.rn}>{r.full_name}</p>
-                        <div style={{display:'flex',alignItems:'center',gap:5}}><span className={styles.rxSmall}>{r.nama_pelajaran}</span><ModeTag mode={r.mode} /></div>
+                        <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                          <span className={styles.rxSmall}>{r.nama_pelajaran}</span>
+                          <ModeTag mode={r.mode} />
+                        </div>
                       </div>
                       <div className={styles.btnRow}>
                         <button className={styles.btnDecline} onClick={() => declineReq(r.id_detail_kursus)}>Tolak</button>
-                        <button className={styles.btnAccept} onClick={() => acceptReq(r.id_detail_kursus)}>Terima</button>
+                        <button className={styles.btnAccept}  onClick={() => acceptReq(r.id_detail_kursus)}>Terima</button>
                       </div>
                     </div>
                   ))}
@@ -383,11 +730,11 @@ export default function DashboardRelawan() {
               <header className={styles.topBar}>
                 <div>
                   <h1 className={styles.pageTitle}>Permintaan Sesi</h1>
-                  <p className={styles.pageDesc}>{requests.length} siswa menunggu konfirmasi</p>
+                  <p className={styles.pageDesc}>{realRequests.length} siswa menunggu konfirmasi</p>
                 </div>
                 <div className={styles.filterRow}>
                   {[{v:'all',l:'Semua'},{v:'online',l:'Online'},{v:'offline',l:'Offline'}].map(f => (
-                    <button key={f.v} className={`${styles.fb} ${reqFilter===f.v?styles.faActive:''}`} onClick={() => setReqFilter(f.v)}>{f.l}</button>
+                    <button key={f.v} className={`${styles.fb} ${reqFilter === f.v ? styles.faActive : ''}`} onClick={() => setReqFilter(f.v)}>{f.l}</button>
                   ))}
                 </div>
               </header>
@@ -399,7 +746,7 @@ export default function DashboardRelawan() {
                 ) : displayRequests.map((r, i) => (
                   <div key={r.id_detail_kursus} className={styles.reqCard}>
                     <div className={styles.reqTop}>
-                      <div className={styles.av} style={{background: avColor(i), width:36, height:36}}>{getInitials(r.full_name)}</div>
+                      <div className={styles.av} style={{ background: avColor(i), width:36, height:36 }}>{getInitials(r.full_name)}</div>
                       <div className={styles.reqInfo}>
                         <p className={styles.rn}>{r.full_name}</p>
                         <p className={styles.rx}>{r.nama_pelajaran} • Usia {r.usia} • 📍 {r.nama_kabupaten}</p>
@@ -407,7 +754,9 @@ export default function DashboardRelawan() {
                       <ModeTag mode={r.mode} />
                     </div>
                     <div className={styles.reqBot}>
-                      <span className={styles.reqTime}>📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', {day:'numeric', month:'short'})} • ⏰ {r.waktu_mulai?.slice(0,5)} - {r.waktu_selesai?.slice(0,5)}</span>
+                      <span className={styles.reqTime}>
+                        📅 {new Date(r.tanggal_mengajar).toLocaleDateString('id-ID', { day:'numeric', month:'short' })} • ⏰ {r.waktu_mulai?.slice(0,5)} - {r.waktu_selesai?.slice(0,5)}
+                      </span>
                       <div className={styles.btnRow}>
                         <button className={styles.btnDecline} onClick={() => declineReq(r.id_detail_kursus)}>Tolak</button>
                         <button className={styles.btnAccept}  onClick={() => acceptReq(r.id_detail_kursus)}>Terima</button>
@@ -419,28 +768,78 @@ export default function DashboardRelawan() {
             </div>
           )}
 
-          
-
           {/* ══ JADWAL ══ */}
           {tab === 'schedule' && (
             <div className={styles.pane}>
               <header className={styles.topBar}>
-                <div><h1 className={styles.pageTitle}>Jadwal 6 Bulan</h1><p className={styles.pageDesc}>Apr–Sep 2026 · 2× seminggu · 2 sesi/hari</p></div>
-                <div className={styles.monthNav}>
-                  <button className={styles.mnBtn} onClick={() => setCurMonth(m => Math.max(3, m-1))}>‹</button>
-                  <span className={styles.mnLabel}>{MONTHS[curMonth]} 2026</span>
-                  <button className={styles.mnBtn} onClick={() => setCurMonth(m => Math.min(8, m+1))}>›</button>
+                <div>
+                  <h1 className={styles.pageTitle}>Jadwal Mengajar</h1>
+                  <p className={styles.pageDesc}>{realKursusCreated.length} jadwal terdaftar · Kelola sesi mengajarmu</p>
+                </div>
+                <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                  <button className={styles.btnCoral} onClick={openAddModal}>+ Tambah Jadwal</button>
+                  <div className={styles.monthNav}>
+                    <button className={styles.mnBtn} onClick={() => setCurMonth(m => Math.max(3, m - 1))}>‹</button>
+                    <span className={styles.mnLabel}>{MONTHS[curMonth]} 2026</span>
+                    <button className={styles.mnBtn} onClick={() => setCurMonth(m => Math.min(8, m + 1))}>›</button>
+                  </div>
                 </div>
               </header>
+
+              {realKursusCreated.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:'var(--gray-500)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Jadwal Kamu</p>
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {realKursusCreated.map(k => {
+                      const mapelObj = MAPEL_OPTIONS.find(m => m.id === k.id_pelajaran) || MAPEL_OPTIONS[0];
+                      const clr = MAPEL_COLOR[k.id_pelajaran] || MAPEL_COLOR[1];
+                      const dur = getDurMins(k.waktu_mulai?.slice(0,5), k.waktu_selesai?.slice(0,5));
+                      return (
+                        <div key={k.id_kursus} className={styles.jadwalItemCard}>
+                          <div className={styles.jadwalItemIcon} style={{ background: clr.bg, color: clr.color }}>
+                            <span style={{ fontSize: 16 }}>{mapelObj.icon}</span>
+                          </div>
+                          <div className={styles.jadwalItemInfo}>
+                            <p className={styles.jadwalItemMapel}>{k.nama_pelajaran || mapelObj.label}</p>
+                            <p className={styles.jadwalItemMeta}>
+                              📅 {new Date(k.tanggal_mengajar).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
+                              {' · '}<span>⏰</span> {k.waktu_mulai?.slice(0,5)}–{k.waktu_selesai?.slice(0,5)} WIB
+                              {dur > 0 && ` (${fmtDur(dur)})`}
+                            </p>
+                            {k.mode === 'online' && k.url_gmeet && (
+                              <a href={`https://${k.url_gmeet}`} target="_blank" rel="noreferrer" className={styles.jadwalMeetLink}>
+                                ▶ {k.url_gmeet}
+                              </a>
+                            )}
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <ModeTag mode={k.mode} />
+                          </div>
+                          <div className={styles.btnRow}>
+                            <button className={styles.btnDecline} onClick={() => openEditModal(k)}>Edit</button>
+                            <button
+                              className={styles.btnDecline}
+                              style={{ color:'#A32D2D' }}
+                              onClick={() => handleDeleteJadwal(k.id_kursus)}
+                            >Hapus</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <p style={{ fontSize:12, fontWeight:700, color:'var(--gray-500)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Template Jadwal — Apr–Sep 2026</p>
               <div className={styles.jadwalGrid}>
                 {scheduleWeeks.map(w => (
                   <div key={w.w} className={styles.weekRow}>
                     <div className={styles.weekHd}>Minggu ke-{w.w}</div>
                     {w.ss.map((s, i) => (
                       <div key={i} className={styles.schedItem}>
-                        <div className={`${styles.schedDot} ${i===0 ? styles.dc : styles.dt}`} />
+                        <div className={`${styles.schedDot} ${i === 0 ? styles.dc : styles.dt}`} />
                         <div className={styles.schedInfo}>
-                          <p className={styles.sm}>{s.subj} — Sesi {i+1}</p>
+                          <p className={styles.sm}>{s.subj} — Sesi {i + 1}</p>
                           <p className={styles.smm}>{s.label} • {SESI_TIMES[i].s}–{SESI_TIMES[i].e} WIB</p>
                         </div>
                         <a href={`https://${s.gmeet}`} target="_blank" rel="noreferrer" className={styles.meetBtn}>Buka Meet</a>
@@ -455,11 +854,16 @@ export default function DashboardRelawan() {
           {/* ══ SERTIFIKAT ══ */}
           {tab === 'cert' && (
             <div className={styles.pane}>
-              <header className={styles.topBar}><div><h1 className={styles.pageTitle}>Sertifikat Relawan</h1><p className={styles.pageDesc}>Diterbitkan setelah 6 bulan mengajar per mapel</p></div></header>
+              <header className={styles.topBar}>
+                <div>
+                  <h1 className={styles.pageTitle}>Sertifikat Relawan</h1>
+                  <p className={styles.pageDesc}>Diterbitkan setelah 6 bulan mengajar per mapel</p>
+                </div>
+              </header>
               <div className={styles.certPage}>
                 {CERT_DATA.map(c => (
                   <div key={c.mapel} className={styles.certCard}>
-                    <div className={styles.certBanner} style={{background:`linear-gradient(135deg,${c.from},${c.to})`}}>
+                    <div className={styles.certBanner} style={{ background:`linear-gradient(135deg,${c.from},${c.to})` }}>
                       <div>
                         <p className={styles.certBannerTitle}>{c.mapel}</p>
                         <p className={styles.certBannerSub}>{c.level} — Relawan Pengajar</p>
@@ -480,19 +884,25 @@ export default function DashboardRelawan() {
                         <>
                           <div className={`${styles.certStatus} ${styles.csDone}`}>
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            <div><p className={styles.csText} style={{color:'var(--teal)'}}>Sertifikat Siap Diunduh</p><p className={styles.csDesc}>Selesai 6 bulan — {c.periode}</p></div>
+                            <div>
+                              <p className={styles.csText} style={{ color:'var(--teal)' }}>Sertifikat Siap Diunduh</p>
+                              <p className={styles.csDesc}>Selesai 6 bulan — {c.periode}</p>
+                            </div>
                           </div>
-                          <div style={{marginTop:10}}><button className={styles.btnCoral}>Download PDF</button></div>
+                          <div style={{ marginTop:10 }}><button className={styles.btnCoral}>Download PDF</button></div>
                         </>
                       ) : (
                         <>
                           <div className={`${styles.certStatus} ${styles.csProg}`}>
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#BA7517" strokeWidth="1.5"/><path d="M10 6.667V10l2.5 1.667" stroke="#BA7517" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                            <div><p className={styles.csText} style={{color:'var(--amber)'}}>Dalam Proses — {c.total-c.bulan} bulan lagi</p><p className={styles.csDesc}>Mulai {c.mulai} — Target {c.target}</p></div>
+                            <div>
+                              <p className={styles.csText} style={{ color:'var(--amber)' }}>Dalam Proses — {c.total - c.bulan} bulan lagi</p>
+                              <p className={styles.csDesc}>Mulai {c.mulai} — Target {c.target}</p>
+                            </div>
                           </div>
-                          <div style={{marginTop:10}}>
+                          <div style={{ marginTop:10 }}>
                             <div className={styles.certProgLabel}><span>Progres waktu</span><span>{c.bulan}/{c.total} bulan</span></div>
-                            <div className={styles.progBar}><div className={styles.progFill} style={{width:`${Math.round(c.bulan/c.total*100)}%`, background:'var(--amber)'}}/></div>
+                            <div className={styles.progBar}><div className={styles.progFill} style={{ width:`${Math.round(c.bulan/c.total*100)}%`, background:'var(--amber)' }}/></div>
                           </div>
                         </>
                       )}
@@ -506,29 +916,29 @@ export default function DashboardRelawan() {
           {/* ══ PENGATURAN ══ */}
           {tab === 'settings' && (
             <div className={styles.pane}>
-              <header className={styles.topBar}><div><h1 className={styles.pageTitle}>Pengaturan Profil</h1><p className={styles.pageDesc}>Kelola status, mode, dan lokasi mengajarmu</p></div></header>
-
+              <header className={styles.topBar}>
+                <div>
+                  <h1 className={styles.pageTitle}>Pengaturan Profil</h1>
+                  <p className={styles.pageDesc}>Kelola status, mode, dan lokasi mengajarmu</p>
+                </div>
+              </header>
               <div className={styles.settCard}>
                 <p className={styles.settTitle}>Status & Mode Mengajar</p>
-
-                {/* Toggle online */}
                 <div className={styles.settRow}>
                   <div>
                     <p className={styles.settLabel}>Status Ketersediaan</p>
                     <p className={styles.settDesc}>Aktifkan agar siswa bisa melihat dan merequest sesimu</p>
                   </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <label className={styles.toggle}>
                       <input type="checkbox" checked={isOnline} onChange={e => setIsOnline(e.target.checked)} />
                       <span className={styles.tsl} />
                     </label>
-                    <span style={{fontSize:11,fontWeight:600, color: isOnline?'var(--green)':'var(--gray-400)'}}>
+                    <span style={{ fontSize:11, fontWeight:600, color: isOnline ? 'var(--green)' : 'var(--gray-400)' }}>
                       {isOnline ? '● Online' : '○ Offline'}
                     </span>
                   </div>
                 </div>
-
-                {/* Mode mengajar */}
                 <div className={styles.settRow}>
                   <div>
                     <p className={styles.settLabel}>Mode Mengajar</p>
@@ -540,12 +950,10 @@ export default function DashboardRelawan() {
                       { v:'offline', l:'Offline',          cls:styles.mbOff  },
                       { v:'both',    l:'Online & Offline', cls:styles.mbBoth },
                     ].map(m => (
-                      <button key={m.v} className={`${styles.mb} ${relMode===m.v ? m.cls : ''}`} onClick={() => setRelMode(m.v)}>{m.l}</button>
+                      <button key={m.v} className={`${styles.mb} ${relMode === m.v ? m.cls : ''}`} onClick={() => setRelMode(m.v)}>{m.l}</button>
                     ))}
                   </div>
                 </div>
-
-                {/* Mapel */}
                 <div className={styles.settRow}>
                   <div>
                     <p className={styles.settLabel}>Mata Pelajaran</p>
@@ -553,7 +961,8 @@ export default function DashboardRelawan() {
                   </div>
                   <div className={styles.mapelTags}>
                     {ALL_MAPEL.map(m => (
-                      <button key={m}
+                      <button
+                        key={m}
                         className={`${styles.mapelChip} ${mapelActive.includes(m) ? styles.mapelActive : ''}`}
                         onClick={() => toggleMapel(m)}
                       >{m}</button>
@@ -561,7 +970,6 @@ export default function DashboardRelawan() {
                   </div>
                 </div>
               </div>
-
               <div className={styles.settCard}>
                 <p className={styles.settTitle}>Notifikasi</p>
                 <div className={styles.settRow}>
@@ -573,7 +981,6 @@ export default function DashboardRelawan() {
                   <label className={styles.toggle}><input type="checkbox" defaultChecked /><span className={styles.tsl} /></label>
                 </div>
               </div>
-
               <button className={styles.saveBtn} onClick={saveSettings}>Simpan Pengaturan</button>
               {settToastShow && <div className={styles.toastMsg}>{settToast}</div>}
             </div>
@@ -584,87 +991,15 @@ export default function DashboardRelawan() {
         {/* ─── GLOBAL TOAST ─── */}
         {toastShow && <div className={styles.toastMsg}>{toast}</div>}
 
-        {/* ─── CREATE MODAL ─── */}
-        {showCreateModal && (
-          <div className={styles.modalOverlay} onClick={() => setShowCreateModal(false)}>
-            <div className={styles.modal} onClick={e => e.stopPropagation()}>
-              <h2 className={styles.modalTitle}>Tambah Jadwal Mengajar</h2>
-              <p className={styles.modalSub}>Tentukan waktu dan mata pelajaran yang ingin Kakak ajarkan.</p>
-              
-              <form onSubmit={handleCreateKursus} className={styles.modalForm}>
-                <div className={styles.mField}>
-                  <label className={styles.mLabel}>Mata Pelajaran</label>
-                  <select 
-                    className={styles.mSel} 
-                    value={formData.id_pelajaran} 
-                    onChange={e => setFormData({...formData, id_pelajaran: e.target.value})}
-                  >
-                    <option value="1">Matematika</option>
-                    <option value="2">Bahasa Inggris</option>
-                    <option value="3">Fisika</option>
-                    <option value="4">Kimia</option>
-                    <option value="5">Biologi</option>
-                    <option value="6">Sejarah</option>
-                  </select>
-                </div>
+        {/* ─── JADWAL MODAL ─── */}
+        <JadwalModal
+          isOpen={showModal}
+          onClose={() => { setShowModal(false); setEditData(null); }}
+          onSubmit={handleSubmitJadwal}
+          editData={editData}
+          loading={formLoading}
+        />
 
-                <div className={styles.mGrid}>
-                  <div className={styles.mField}>
-                    <label className={styles.mLabel}>Tanggal</label>
-                    <input 
-                      type="date" 
-                      className={styles.mInput} 
-                      value={formData.tanggal_mengajar} 
-                      onChange={e => setFormData({...formData, tanggal_mengajar: e.target.value})}
-                      required 
-                    />
-                  </div>
-                  <div className={styles.mField}>
-                    <label className={styles.mLabel}>Mode</label>
-                    <select 
-                      className={styles.mSel} 
-                      value={formData.mode} 
-                      onChange={e => setFormData({...formData, mode: e.target.value})}
-                    >
-                      <option value="online">Online</option>
-                      <option value="offline">Offline</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className={styles.mGrid}>
-                  <div className={styles.mField}>
-                    <label className={styles.mLabel}>Waktu Mulai</label>
-                    <input 
-                      type="time" 
-                      className={styles.mInput} 
-                      value={formData.waktu_mulai} 
-                      onChange={e => setFormData({...formData, waktu_mulai: e.target.value})}
-                      required 
-                    />
-                  </div>
-                  <div className={styles.mField}>
-                    <label className={styles.mLabel}>Waktu Selesai</label>
-                    <input 
-                      type="time" 
-                      className={styles.mInput} 
-                      value={formData.waktu_selesai} 
-                      onChange={e => setFormData({...formData, waktu_selesai: e.target.value})}
-                      required 
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.modalFoot}>
-                  <button type="button" className={styles.btnOutline} onClick={() => setShowCreateModal(false)}>Batal</button>
-                  <button type="submit" className={styles.btnCoral} disabled={formLoading}>
-                    {formLoading ? "Menyimpan..." : "Simpan Jadwal"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </ProtectedRoute>
   );

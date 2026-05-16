@@ -76,9 +76,6 @@
 }
 .userName { font-size: 12px; font-weight: 600; color: var(--gray-900); margin: 0 0 1px; }
 .userRole { font-size: 10px; color: var(--gray-400); margin: 0; }
-.onlineLabel { font-size: 11px; font-weight: 600; }
-.olOn  { color: var(--green); }
-.olOff { color: var(--gray-400); }
 
 /* ── Main ── */
 .main { overflow-y: auto; }
@@ -95,7 +92,7 @@
 .mOff  { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-full); background: var(--amber-light); color: var(--amber); }
 .mBoth { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-full); background: var(--blue-light); color: var(--blue); }
 
-/* Stats — 3 kolom (total jam dihapus) */
+/* Stats */
 .statsGrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
 .sc {
   background: var(--white); border-radius: var(--r-lg); padding: 12px;
@@ -120,10 +117,45 @@
 .linkBtn:hover { text-decoration: underline; }
 
 /* Today sessions */
-.todayCard { background: var(--white); border-radius: 9px; border: 0.5px solid var(--gray-200); padding: 10px 12px; margin-bottom: 6px; display: flex; gap: 10px; align-items: flex-start; }
-.timeBlock { text-align: center; min-width: 46px; padding: 6px; border-radius: 8px; flex-shrink: 0; }
-.timeVal   { font-size: 13px; font-weight: 800; line-height: 1; margin: 0 0 1px; }
-.timeWib   { font-size: 9px; font-weight: 600; margin: 0; }
+.todayCard {
+  background: var(--white); border-radius: 9px;
+  border: 0.5px solid var(--gray-200); padding: 10px 12px;
+  margin-bottom: 6px; display: flex; gap: 10px; align-items: flex-start;
+}
+
+/* ── Time / Date block kiri ── */
+.timeBlock {
+  text-align: center;
+  min-width: 52px;
+  padding: 7px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+/* untuk data real → tanggal */
+.timeDay {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  margin: 0;
+}
+.timeMon {
+  font-size: 10px;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* untuk data mock → jam */
+.timeVal { font-size: 13px; font-weight: 800; line-height: 1; margin: 0 0 1px; }
+.timeWib { font-size: 9px; font-weight: 600; margin: 0; }
+
 .todayBody { flex: 1; }
 .todayMapel { font-size: 12px; font-weight: 700; color: var(--gray-900); margin: 0 0 2px; }
 .todayMeta  { font-size: 10px; color: var(--gray-400); margin: 0; }
@@ -145,8 +177,11 @@
 .btnDecline:hover { background: #FCEBEB; color: #A32D2D; border-color: #F7C1C1; }
 .btnAccept  { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; color: #fff; background: var(--teal); border: none; cursor: pointer; font-family: inherit; transition: background var(--tf); }
 .btnAccept:hover { background: var(--teal-dark); }
-.btnCoral   { padding: 6px 14px; border-radius: 8px; background: var(--coral); color: #fff; border: none; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btnCoral   { padding: 6px 14px; border-radius: 8px; background: var(--coral); color: #fff; border: none; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background var(--tf); }
 .btnCoral:hover { background: #993C1D; }
+.btnCoral:disabled { opacity: .6; cursor: not-allowed; }
+.btnOutline { padding: 6px 14px; border-radius: 8px; background: none; color: var(--gray-500); border: 0.5px solid var(--gray-200); font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background var(--tf); }
+.btnOutline:hover { background: var(--gray-100); }
 
 /* Filter */
 .filterRow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -162,17 +197,6 @@
 .reqInfo { flex: 1; }
 .reqBot  { display: flex; justify-content: space-between; align-items: center; padding-top: 7px; border-top: 0.5px solid var(--gray-100); }
 .reqTime { font-size: 10px; color: var(--gray-400); }
-
-/* Siswa */
-.siswaList { display: flex; flex-direction: column; gap: 6px; }
-.siswaCard { background: var(--white); border-radius: var(--r-lg); border: 0.5px solid var(--gray-200); padding: 12px; display: flex; align-items: center; gap: 10px; transition: border-color var(--tf); }
-.siswaCard:hover { border-color: var(--teal); }
-.siInfo  { flex: 1; }
-.siName  { font-size: 12px; font-weight: 600; color: var(--gray-900); margin: 0 0 2px; }
-.siMeta  { font-size: 10px; color: var(--gray-400); margin: 0; }
-.progBar { height: 5px; border-radius: var(--r-full); background: var(--gray-200); overflow: hidden; margin-top: 5px; }
-.progFill { height: 100%; border-radius: var(--r-full); background: var(--teal); transition: width .4s ease; }
-.progPct { font-size: 11px; font-weight: 600; color: var(--teal); }
 
 /* Jadwal */
 .monthNav { display: flex; align-items: center; gap: 6px; }
@@ -192,6 +216,30 @@
 .meetBtn { padding: 4px 9px; border-radius: 6px; background: var(--blue-light); color: var(--blue); font-size: 10px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; }
 .meetBtn:hover { opacity: .8; }
 
+/* ── Jadwal Item Card ── */
+.jadwalItemCard {
+  background: var(--white);
+  border: 0.5px solid var(--gray-200);
+  border-radius: var(--r-lg);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color var(--tf);
+}
+.jadwalItemCard:hover { border-color: var(--coral); }
+.jadwalItemIcon {
+  width: 38px; height: 38px;
+  border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+.jadwalItemInfo { flex: 1; min-width: 0; }
+.jadwalItemMapel { font-size: 12px; font-weight: 700; color: var(--gray-900); margin: 0 0 3px; }
+.jadwalItemMeta  { font-size: 10px; color: var(--gray-400); margin: 0 0 3px; }
+.jadwalMeetLink  { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: var(--blue); text-decoration: none; }
+.jadwalMeetLink:hover { text-decoration: underline; }
+
 /* Sertifikat */
 .certPage { display: flex; flex-direction: column; gap: 10px; }
 .certCard { background: var(--white); border-radius: var(--r-xl); border: 0.5px solid var(--gray-200); overflow: hidden; }
@@ -201,7 +249,6 @@
 .certSeal { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.2); border: 2px solid rgba(255,255,255,.5); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .certBody { padding: 14px 18px; }
 .certMapel { font-size: 14px; font-weight: 700; color: var(--gray-900); margin: 0 0 8px; }
-/* 2 kolom (jam mengajar dihapus) */
 .certStats { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 12px; }
 .certStat  { text-align: center; padding: 8px; background: var(--gray-100); border-radius: 8px; }
 .csv { font-size: 16px; font-weight: 700; color: var(--gray-900); margin: 0 0 2px; }
@@ -212,6 +259,8 @@
 .csText { font-size: 12px; font-weight: 600; margin: 0 0 2px; }
 .csDesc { font-size: 10px; color: var(--gray-400); margin: 0; }
 .certProgLabel { display: flex; justify-content: space-between; font-size: 10px; color: var(--gray-400); margin-bottom: 4px; }
+.progBar { height: 5px; border-radius: var(--r-full); background: var(--gray-200); overflow: hidden; margin-top: 5px; }
+.progFill { height: 100%; border-radius: var(--r-full); background: var(--teal); transition: width .4s ease; }
 
 /* Pengaturan */
 .settCard  { background: var(--white); border-radius: var(--r-xl); border: 0.5px solid var(--gray-200); padding: 14px; margin-bottom: 10px; }
@@ -229,17 +278,14 @@
 .toggle input:checked+.tsl { background: var(--coral); }
 .toggle input:checked+.tsl:before { transform: translateX(20px); }
 
-/* Mode buttons */
+/* Mode buttons (settings) */
 .modeBtns { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .mb { padding: 7px 11px; border-radius: 8px; border: 0.5px solid var(--gray-200); background: var(--white); font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--gray-500); transition: background var(--tf), color var(--tf), border-color var(--tf); white-space: nowrap; }
 .mbOn   { background: var(--green-light) !important; color: var(--green) !important; border-color: var(--green) !important; }
 .mbOff  { background: var(--amber-light) !important; color: var(--amber) !important; border-color: var(--amber) !important; }
 .mbBoth { background: var(--blue-light) !important; color: var(--blue) !important; border-color: var(--blue) !important; }
 
-.kotaSel { padding: 6px 10px; border-radius: 8px; border: 0.5px solid var(--gray-200); font-family: inherit; font-size: 12px; color: var(--gray-900); background: var(--white); outline: none; min-width: 155px; flex-shrink: 0; }
-.kotaSel:focus { border-color: var(--coral); }
-
-/* Mapel tags */
+/* Mapel tags (settings) */
 .mapelTags  { display: flex; flex-wrap: wrap; gap: 5px; max-width: 260px; justify-content: flex-end; }
 .mapelChip  { padding: 4px 9px; border-radius: var(--r-full); font-size: 10px; font-weight: 600; cursor: pointer; font-family: inherit; border: 0.5px solid var(--gray-200); background: var(--gray-100); color: var(--gray-500); transition: background var(--tf), color var(--tf), border-color var(--tf); }
 .mapelActive { background: var(--teal-light); color: var(--teal-dark); border-color: var(--teal); }
@@ -254,6 +300,197 @@
 /* Empty */
 .empty { text-align: center; padding: 24px; color: var(--gray-400); font-size: 12px; background: var(--white); border-radius: var(--r-xl); border: 0.5px solid var(--gray-200); }
 
+/* ════════════════════════════════════════
+   MODAL — Tambah / Edit Jadwal
+════════════════════════════════════════ */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  backdrop-filter: blur(2px);
+  animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  border: 0.5px solid var(--gray-200);
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp .25s ease;
+  box-shadow: 0 20px 60px rgba(0,0,0,.15);
+}
+
+.modalHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 20px 0;
+  margin-bottom: 4px;
+}
+.modalTitle { font-size: 15px; font-weight: 700; color: var(--gray-900); margin: 0 0 2px; }
+.modalSub   { font-size: 11px; color: var(--gray-400); margin: 0; }
+.modalClose {
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--gray-400); font-size: 16px; line-height: 1;
+  border-radius: 6px; transition: background var(--tf), color var(--tf);
+  flex-shrink: 0;
+}
+.modalClose:hover { background: var(--gray-100); color: var(--gray-700); }
+
+.modalForm { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+/* Field wrapper */
+.mField { display: flex; flex-direction: column; gap: 6px; }
+.mLabel {
+  font-size: 10px; font-weight: 700; color: var(--gray-500);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.mInput {
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  border: 0.5px solid var(--gray-200);
+  background: var(--gray-50);
+  color: var(--gray-900);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--tf), box-shadow var(--tf);
+  /* agar select juga rapi */
+  appearance: auto;
+  cursor: pointer;
+}
+.mInput:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(216,90,48,.1); }
+.mInputErr { border-color: #E24B4A !important; }
+.mInputErr:focus { box-shadow: 0 0 0 3px rgba(226,75,74,.1) !important; }
+.mErr { font-size: 10px; color: #E24B4A; margin: 0; }
+.mGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Durasi indicator ── */
+.durBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  border: 0.5px solid;
+  transition: background var(--tf), border-color var(--tf);
+}
+
+/* ── Mode buttons (inside modal) ── */
+.modeBtnRow { display: flex; gap: 8px; }
+.modeBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--r-lg);
+  border: 0.5px solid var(--gray-200);
+  background: var(--gray-50);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background var(--tf), border-color var(--tf), color var(--tf);
+}
+.modeBtn:hover { background: var(--gray-100); }
+.modeBtnOnActive {
+  background: var(--green-light) !important;
+  border: 1.5px solid var(--green) !important;
+  color: var(--green) !important;
+}
+.modeBtnOffActive {
+  background: var(--amber-light) !important;
+  border: 1.5px solid var(--amber) !important;
+  color: var(--amber) !important;
+}
+
+/* ── GMeet input ── */
+.gmeetInputWrap {
+  display: flex;
+  align-items: center;
+  border: 0.5px solid var(--gray-200);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--gray-50);
+  transition: border-color var(--tf), box-shadow var(--tf);
+}
+.gmeetInputWrap:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(24,95,165,.1);
+}
+
+/* ── Lokasi offline input ── */
+.lokasiInputWrap {
+  display: flex;
+  align-items: center;
+  border: 0.5px solid var(--gray-200);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--gray-50);
+  transition: border-color var(--tf), box-shadow var(--tf);
+}
+.lokasiInputWrap:focus-within {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(186,117,23,.1);
+}
+.gmeetInputErr { border-color: #E24B4A !important; }
+.gmeetPrefix {
+  padding: 9px 10px;
+  color: var(--gray-400);
+  border-right: 0.5px solid var(--gray-200);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.gmeetInput {
+  flex: 1;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  color: var(--gray-900);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+.gmeetTestBtn {
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue);
+  text-decoration: none;
+  border-left: 0.5px solid var(--gray-200);
+  flex-shrink: 0;
+  white-space: nowrap;
+  background: var(--blue-light);
+  transition: opacity var(--tf);
+}
+.gmeetTestBtn:hover { opacity: .8; }
+.gmeetHint { font-size: 10px; color: var(--gray-400); margin: 0; }
+
+/* ── Modal footer ── */
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 0.5px solid var(--gray-100);
+  margin-top: 4px;
+}
+
 /* Responsive */
 @media(max-width:1100px){
   .statsGrid{grid-template-columns:repeat(2,1fr)}
@@ -263,4 +500,6 @@
   .layout{grid-template-columns:1fr}
   .sidebar{display:none}
   .statsGrid{grid-template-columns:1fr 1fr}
+  .mGrid{grid-template-columns:1fr}
+  .modeBtnRow{flex-direction:column}
 }
