@@ -1,7 +1,7 @@
 import * as model from "./master.model";
 
-export async function getAllRelawan() {
-    return await model.getAllRelawan();
+export async function getAllRelawan(keterangan: string) {
+    return await model.getAllRelawan(keterangan);
 }
 
 export async function getAllSiswa() {
@@ -14,4 +14,8 @@ export async function deleteRelawan(id_relawan: number) {
 
 export async function deleteSiswa(id_siswa: number) {
     return await model.deleteSiswa(id_siswa);
+}
+
+export async function updateRequestRelawan(id_relawan: number) {
+  return await model.updateRequestRelawan(id_relawan);
 }

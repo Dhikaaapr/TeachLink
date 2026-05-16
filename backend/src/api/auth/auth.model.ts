@@ -16,7 +16,7 @@ export async function getUser(email: string) {
       b.role 
     FROM pengguna a 
     INNER JOIN role b ON a.id_role = b.id_role  
-    WHERE a.email = $1
+    WHERE a.email = $1 AND a.keterangan = 'ACC'
     LIMIT 1
   `;
 
@@ -66,6 +66,7 @@ export async function createUser(data: any) {
     ktp,
     bidang_keahlian,
     bio,
+    keterangan
   } = data;
 
   const sql = `
@@ -82,9 +83,10 @@ export async function createUser(data: any) {
       institusi,
       ktp,
       bidang_keahlian,
-      bio
+      bio,
+      keterangan
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
     )
     RETURNING user_id, full_name, email, id_role;
   `;
@@ -103,6 +105,7 @@ export async function createUser(data: any) {
     ktp,
     bidang_keahlian,
     bio,
+    keterangan
   ]);
 
   return formatResult(rows, "create");

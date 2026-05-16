@@ -133,6 +133,7 @@ export async function registerUser(body: any) {
         ktp: ktpFileName,
         bidang_keahlian: bidang_keahlian || null,
         bio: bio || null,
+        keterangan: id_role == 2 ? "PENDING" : "ACC",
     });
 
     if (!result.data) {

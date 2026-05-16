@@ -4,14 +4,17 @@ import { defaultResponse } from "../../utils/formatResponse";
 import { authenticate } from "../../middleware/auth.middleware";
 import { deleteRelawanParams } from "./master.schema";
 import { deleteSiswaParams } from "./master.schema";
+import { keteranganRelawanParams } from "./master.schema";
+import { updateRequestRelawanParams } from "./master.schema";
 
 export const masterRoutes = new Elysia({
   prefix: "/master",
 })
 
-  .get("/relawan", controller.getAllRelawan, {
+  .get("/relawan/:keterangan", controller.getAllRelawan, {
     beforeHandle: [authenticate()],
     response: { 200: defaultResponse() },
+    params: keteranganRelawanParams,
     detail: {
       tags: ["Master"],
       summary: "Get All Relawan",
@@ -49,4 +52,15 @@ export const masterRoutes = new Elysia({
       summary: "Delete Siswa",
       description: "Delete a siswa by ID",
     },
-  });
+  })
+
+   .patch("/acc/:id_relawan", controller.updateRequestRelawan, {
+      beforeHandle: [authenticate()],
+      response: { 200: defaultResponse() },
+      params: updateRequestRelawanParams,
+      detail: {
+        tags: ["Master"],
+        summary: "Update Request Relawan",
+        description: "Update the status of a relawan request", 
+      },
+    });

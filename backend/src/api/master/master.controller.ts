@@ -2,9 +2,12 @@ import * as service from "./master.service";
 import { formatResponse } from "../../utils/formatResponse"
 import { DeleteRelawanParamsDTO } from "./master.schema";
 import { DeleteSiswaParamsDTO } from "./master.schema";
+import { KeteranganRelawanParamsDTO } from "./master.schema";
+import { UpdateRequestRelawanParamsDTO } from "./master.schema";
 
 export async function getAllRelawan(ctx: any) {
-    const result = await service.getAllRelawan();
+    const { keterangan } = ctx.params as KeteranganRelawanParamsDTO;
+    const result = await service.getAllRelawan(keterangan);
     return formatResponse(ctx, result);
 }
 
@@ -28,4 +31,12 @@ console.log("ID Siswa yang akan dihapus:", id_siswa); // Debug log
     const result = await service.deleteSiswa(id_siswa);
 
     return formatResponse(ctx, result);
+}
+
+export async function updateRequestRelawan(ctx: any) {
+  const { id_relawan } =ctx.params as UpdateRequestRelawanParamsDTO;
+
+  const result = await service.updateRequestRelawan(id_relawan);
+
+  return formatResponse(ctx, result);
 }
