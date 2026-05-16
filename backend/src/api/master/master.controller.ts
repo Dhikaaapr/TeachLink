@@ -1,9 +1,10 @@
 import * as service from "./master.service";
 import { formatResponse } from "../../utils/formatResponse"
-import { DeleteRelawanParamsDTO } from "./master.schema";
+import { DeleteRelawanParamsDTO, GetDetailUserParamsDTO } from "./master.schema";
 import { DeleteSiswaParamsDTO } from "./master.schema";
 import { KeteranganRelawanParamsDTO } from "./master.schema";
 import { UpdateRequestRelawanParamsDTO } from "./master.schema";
+import { getDetailUserParams } from "./master.schema";
 
 export async function getAllRelawan(ctx: any) {
     const { keterangan } = ctx.params as KeteranganRelawanParamsDTO;
@@ -37,6 +38,14 @@ export async function updateRequestRelawan(ctx: any) {
   const { id_relawan } =ctx.params as UpdateRequestRelawanParamsDTO;
 
   const result = await service.updateRequestRelawan(id_relawan);
+
+  return formatResponse(ctx, result);
+}
+
+export async function getDetailUser(ctx: any) {
+  const { id_user } = ctx.params as GetDetailUserParamsDTO;
+
+  const result = await service.getDetailUser(id_user);
 
   return formatResponse(ctx, result);
 }

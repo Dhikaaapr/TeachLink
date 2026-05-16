@@ -27,3 +27,9 @@ export const updateRequestRelawanParams = t.Object({
 });
 
 export type UpdateRequestRelawanParamsDTO = typeof updateRequestRelawanParams.static;
+
+export const getDetailUserParams = t.Object({
+  id_user: t.Number()
+});
+
+export type GetDetailUserParamsDTO = typeof getDetailUserParams.static;

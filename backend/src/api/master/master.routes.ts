@@ -6,6 +6,7 @@ import { deleteRelawanParams } from "./master.schema";
 import { deleteSiswaParams } from "./master.schema";
 import { keteranganRelawanParams } from "./master.schema";
 import { updateRequestRelawanParams } from "./master.schema";
+import { getDetailUserParams } from "./master.schema";
 
 export const masterRoutes = new Elysia({
   prefix: "/master",
@@ -63,4 +64,15 @@ export const masterRoutes = new Elysia({
         summary: "Update Request Relawan",
         description: "Update the status of a relawan request", 
       },
-  });
+  })
+
+  .get("/user/:id_user", controller.getDetailUser, {
+  beforeHandle: [authenticate()],
+  response: { 200: defaultResponse() },
+  params: getDetailUserParams,
+  detail: {
+    tags: ["Master"],
+    summary: "Get Detail User",
+    description: "Get detail data of a user (siswa or relawan)",
+  },
+});

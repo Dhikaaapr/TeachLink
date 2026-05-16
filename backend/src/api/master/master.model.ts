@@ -66,3 +66,37 @@ export async function updateRequestRelawan(id_relawan: number) {
   const result = await queryDB(sql, [id_relawan]);
   return formatResult(result, "update");
 }
+
+export async function getDetailUser(id_user: number) {
+  const sql = `
+    SELECT 
+      a.user_id AS id_user,
+      a.full_name,
+      a.email,
+      a.id_role,
+      b.role
+    FROM pengguna a
+    INNER JOIN role b ON a.id_role = b.id_role
+    WHERE a.user_id = $1
+    LIMIT 1
+  `;
+
+  const result = await queryDB(sql, [id_user]);
+
+  // ambil 1 data saja
+  const user = result.rows[0];
+
+  if (!user) {
+    return {
+      success: false,
+      message: "User tidak ditemukan",
+      data: null
+    };
+  }
+
+  return {
+    success: true,
+    message: "Berhasil ambil detail user",
+    data: user
+  };
+}

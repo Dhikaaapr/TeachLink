@@ -19,3 +19,7 @@ export async function deleteSiswa(id_siswa: number) {
 export async function updateRequestRelawan(id_relawan: number) {
   return await model.updateRequestRelawan(id_relawan);
 }
+
+export async function getDetailUser(id_user: number) {
+  return await model.getDetailUser(id_user);
+}
