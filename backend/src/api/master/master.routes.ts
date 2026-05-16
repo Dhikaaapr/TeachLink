@@ -63,4 +63,4 @@ export const masterRoutes = new Elysia({
         summary: "Update Request Relawan",
         description: "Update the status of a relawan request", 
       },
-    });
+  });

@@ -27,7 +27,7 @@ export async function deleteRelawan (ctx: any) {
 
 export async function deleteSiswa (ctx: any) {
    const { id_siswa } = ctx.params as DeleteSiswaParamsDTO;
-console.log("ID Siswa yang akan dihapus:", id_siswa); // Debug log
+
     const result = await service.deleteSiswa(id_siswa);
 
     return formatResponse(ctx, result);
