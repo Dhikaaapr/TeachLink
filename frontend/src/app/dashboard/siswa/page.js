@@ -20,7 +20,38 @@ const KOTA_DEKAT = {
   "Bekasi":          ["Bekasi","Jakarta Timur","Jakarta Selatan","Depok"],
 };
 
-/* ─────────────── HELPERS ─────────────── */
+function parseDateSafe(dateStr) {
+  if (!dateStr) return new Date();
+  return new Date(dateStr);
+}
+
+function getSessionStatus(s) {
+  if (!s) return "completed";
+  const isReal = !!s.id_kursus;
+  if (!isReal) return s.status || "completed";
+
+  const baseDate = parseDateSafe(s.tanggal_mengajar);
+  if (s.waktu_selesai) {
+    const [hours, minutes] = s.waktu_selesai.split(":");
+    baseDate.setHours(parseInt(hours || 0), parseInt(minutes || 0), 0, 0);
+  } else {
+    baseDate.setHours(23, 59, 59, 999);
+  }
+  return baseDate.getTime() >= new Date().getTime() ? "upcoming" : "completed";
+}
+
+function isUpcomingSessionVisible(s) {
+  const status = getSessionStatus(s);
+  if (status !== "upcoming") return false;
+
+  const sessionDate = parseDateSafe(s.tanggal_mengajar);
+  const todayDate = new Date();
+
+  return sessionDate.getFullYear() === todayDate.getFullYear() &&
+         sessionDate.getMonth() === todayDate.getMonth() &&
+         sessionDate.getDate() === todayDate.getDate();
+}
+
 function getInitials(name) {
   if (!name) return "?";
   return name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
@@ -109,12 +140,13 @@ const [filterKota, setFilterKota] = useState("");
 
   // Fetch real data for Find Tab
   useEffect(() => {
-    if (tab === "find") {
+    if (tab === "find" || tab === "overview") {
       const fetchKursus = async () => {
         setLoadingReal(true);
         try {
           const params = new URLSearchParams({
             mode: filterMode,
+            ...(user?.user_id && { id_siswa: user.user_id }),
             ...(searchQ && { nama_pelajaran: searchQ }),
             ...(filterProvinsi && { id_provinsi: filterProvinsi }),
             ...(filterKota && { id_kabupaten: filterKota }),
@@ -134,7 +166,7 @@ const [filterKota, setFilterKota] = useState("");
       const debounce = setTimeout(fetchKursus, 500);
       return () => clearTimeout(debounce);
     }
-  }, [tab, searchQ, filterMode, filterProvinsi, filterKota]);
+  }, [tab, searchQ, filterMode, filterProvinsi, filterKota, user]);
 
   // Fetch real sessions
   useEffect(() => {
@@ -177,11 +209,16 @@ const [filterKota, setFilterKota] = useState("");
 
   const filteredSessions = useMemo(() =>
     sessFilter === "all" ? displaySessions : displaySessions.filter(s => {
-      const status = !!s.id_kursus ? (new Date(s.tanggal_mengajar) > new Date() ? "upcoming" : "completed") : s.status;
+      const status = getSessionStatus(s);
       return status === sessFilter;
     }),
     [sessFilter, displaySessions]
   );
+ 
+  const distinctSubjectsCount = useMemo(() => {
+    const subjects = realSessions.map(s => s.nama_pelajaran).filter(Boolean);
+    return new Set(subjects).size;
+  }, [realSessions]);
 
   const [requestedIds, setRequestedIds] = useState([]);
   const [requestingId, setRequestingId] = useState(null);
@@ -306,9 +343,9 @@ const [filterKota, setFilterKota] = useState("");
                 <button className={styles.btnPrimary} onClick={() => setTab("find")}>+ Cari Relawan</button>
               </header>
               <div className={styles.statsGrid}>
-                <StatCard icon="clock" color="teal"  value="24"  label="Jam Belajar"    />
-                <StatCard icon="star"  color="coral" value="8"   label="Sesi Selesai"   />
-                <StatCard icon="book"  color="blue"  value="3"   label="Mata Pelajaran" />
+                <StatCard icon="clock" color="teal"  value={realKursus.length}        label="Relawan Untukmu"    />
+                <StatCard icon="star"  color="coral" value={realSessions.length}      label="Sesi Belajar"   />
+                <StatCard icon="book"  color="blue"  value={distinctSubjectsCount}  label="Mata Pelajaran" />
               </div>
               <div className={styles.grid2}>
                 <div className={styles.card}>
@@ -319,14 +356,15 @@ const [filterKota, setFilterKota] = useState("");
                   <div className={styles.siList}>
                     {loadingSess ? (
                       <div className={styles.empty}>Memuat sesi...</div>
-                    ) : displaySessions.length === 0 ? (
-                      <div className={styles.empty}>Belum ada sesi</div>
-                    ) : displaySessions.slice(0,3).map(s => {
+                    ) : displaySessions.filter(isUpcomingSessionVisible).length === 0 ? (
+                      <div className={styles.empty}>Belum ada sesi mendatang terdekat</div>
+                    ) : displaySessions.filter(isUpcomingSessionVisible).slice(0,3).map(s => {
                       const isReal = !!s.id_kursus;
-                      const dateObj = isReal ? new Date(s.tanggal_mengajar) : null;
+                      const dateObj = isReal ? parseDateSafe(s.tanggal_mengajar) : null;
                       const day = isReal ? dateObj.getDate() : s.day;
                       const month = isReal ? dateObj.toLocaleDateString('id-ID', {month:'short'}) : s.month;
-                      const status = isReal ? (new Date(s.tanggal_mengajar) > new Date() ? "upcoming" : "completed") : s.status;
+                      
+                      const status = getSessionStatus(s);
 
                       return (
                         <div className={styles.siRow} key={isReal ? `real-s-${s.id_kursus}` : `mock-s-${s.id}`}>
@@ -339,7 +377,7 @@ const [filterKota, setFilterKota] = useState("");
                             <p className={styles.sMeta}>{isReal ? s.full_name : s.relawan} • ⏰ {isReal ? s.waktu_mulai?.slice(0,5) : s.time} - {isReal ? s.waktu_selesai?.slice(0,5) : ""} • {s.mode}</p>
                           </div>
                           <span className={`${styles.badge} ${status==="upcoming" ? styles.bUp : styles.bDn}`}>
-                            {status==="upcoming" ? "Akan Datang" : "Selesai"}
+                            {status==="upcoming" ? "Segera" : "Selesai"}
                           </span>
                         </div>
                       );
@@ -510,7 +548,7 @@ const [filterKota, setFilterKota] = useState("");
                   <p className={styles.pageDesc}>Riwayat dan jadwal sesimu</p>
                 </div>
                 <div className={styles.filterRow}>
-                  {[{v:"all",label:"Semua"},{v:"upcoming",label:"Akan Datang"},{v:"completed",label:"Selesai"}].map(f => (
+                  {[{v:"all",label:"Semua"},{v:"upcoming",label:"Segera"},{v:"completed",label:"Selesai"}].map(f => (
                     <button key={f.v} className={`${styles.fb} ${sessFilter===f.v ? styles.faActive:""}`} onClick={() => setSessFilter(f.v)}>{f.label}</button>
                   ))}
                 </div>
@@ -522,10 +560,11 @@ const [filterKota, setFilterKota] = useState("");
                   <div className={styles.empty}>Tidak ada sesi</div>
                 ) : displaySessions.map(s => {
                   const isReal = !!s.id_kursus;
-                  const dateObj = isReal ? new Date(s.tanggal_mengajar) : null;
+                  const dateObj = isReal ? parseDateSafe(s.tanggal_mengajar) : null;
                   const day = isReal ? dateObj.getDate() : s.day;
                   const month = isReal ? dateObj.toLocaleDateString('id-ID', {month:'short'}) : s.month;
-                  const status = isReal ? (new Date(s.tanggal_mengajar) > new Date() ? "upcoming" : "completed") : s.status;
+                  
+                  const status = getSessionStatus(s);
 
                   return (
                     <div className={styles.sessCard} key={isReal ? `real-fs-${s.id_kursus}` : `mock-fs-${s.id}`}>
@@ -538,10 +577,17 @@ const [filterKota, setFilterKota] = useState("");
                         <p className={styles.sMeta}>dengan {isReal ? s.full_name : s.relawan} • ⏰ {isReal ? s.waktu_mulai?.slice(0,5) : s.time} - {isReal ? s.waktu_selesai?.slice(0,5) : ""} • {s.mode}</p>
                       </div>
                       <span className={`${styles.badge} ${status==="upcoming" ? styles.bUp : styles.bDn}`} style={{marginRight:6}}>
-                        {status==="upcoming" ? "Akan Datang" : "Selesai"}
+                        {status==="upcoming" ? "Segera" : "Selesai"}
                       </span>
-                      {status === "upcoming" && (
-                        <a href={`https://${isReal ? (s.url_gmeet || "meet.google.com") : s.gmeet}`} target="_blank" rel="noreferrer" className={styles.meetBtn}>Buka Meet</a>
+                      {status === "upcoming" && s.mode === "online" && (
+                        <a 
+                          href={isReal ? (s.url_gmeet ? (s.url_gmeet.startsWith("http") ? s.url_gmeet : `https://${s.url_gmeet}`) : "https://meet.google.com/ibh-dzyy-vww") : (s.gmeet ? (s.gmeet.startsWith("http") ? s.gmeet : `https://${s.gmeet}`) : "https://meet.google.com/ibh-dzyy-vww")} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className={styles.meetBtn}
+                        >
+                          Buka Meet
+                        </a>
                       )}
                     </div>
                   );
@@ -550,43 +596,12 @@ const [filterKota, setFilterKota] = useState("");
             </div>
           )}
 
-
-
           {/* ══ PENGATURAN ══ */}
           {tab === "settings" && (
             <div className={styles.pane}>
               <header className={styles.topBar}>
                 <div><h1 className={styles.pageTitle}>Pengaturan Profil</h1><p className={styles.pageDesc}>Atur preferensi belajarmu</p></div>
               </header>
-
-              <div className={styles.settCard}>
-                <p className={styles.settTitle}>Preferensi Mode Belajar</p>
-                <div className={styles.settRow}>
-                  <div>
-                    <p className={styles.settLabel}>Mode Belajar Saya</p>
-                    <p className={styles.settDesc}>Pilih apakah kamu mau belajar online, offline, atau keduanya</p>
-                  </div>
-                  <div className={styles.modeBtnRow}>
-                    {[
-                      {v:"online",  label:"Online",          cls:styles.mBtnOnline  },
-                      {v:"offline", label:"Offline",         cls:styles.mBtnOffline },
-                      {v:"both",    label:"Keduanya",        cls:styles.mBtnBoth    },
-                    ].map(m => (
-                      <button key={m.v} className={`${styles.mBtn} ${siswaMode===m.v ? m.cls:""}`} onClick={() => setSiswaMode(m.v)}>{m.label}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className={styles.settRow}>
-                  <div>
-                    <p className={styles.settLabel}>Daerah Domisili</p>
-                    <p className={styles.settDesc}>Digunakan untuk mencari relawan offline terdekat</p>
-                  </div>
-                  <select className={styles.kotaSel} value={siswaKota} onChange={e => setSiswaKota(e.target.value)}>
-                    <option value="">Pilih Daerah</option>
-                    {kabupatens.map(k => <option key={k.id_kabupaten} value={k.nama_kabupaten}>{k.nama_kabupaten}</option>)}
-                  </select>
-                </div>
-              </div>
 
               <div className={styles.settCard}>
                 <p className={styles.settTitle}>Notifikasi</p>

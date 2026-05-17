@@ -10,6 +10,7 @@ import { getFilterKursusQuery } from "./kursus.schema";
 import { updateRequestKursusParams } from "./kursus.schema";
 import { getKursusBySiswaQuery } from "./kursus.schema";
 import { updateWaktuMengajarBody } from "./kursus.schema";
+import { deleteKursusParams } from "./kursus.schema";
 
 export const kursusRoutes = new Elysia({
   prefix: "/kursus",
@@ -74,7 +75,7 @@ export const kursusRoutes = new Elysia({
     detail: {
       tags: ["Kursus"],
       summary: "Filter Kursus",
-      description: "Filter kursus based on specified criteria", 
+      description: "Filter kursus based on specified criteria",
     },
   })
 
@@ -85,10 +86,10 @@ export const kursusRoutes = new Elysia({
     detail: {
       tags: ["Kursus"],
       summary: "Update Request Kursus",
-      description: "Update the status of a kursus request", 
+      description: "Update the status of a kursus request",
     },
   })
-  
+
   .get("/siswa", controller.getKursusBySiswa, {
     beforeHandle: [authenticate()],
     response: { 200: defaultResponse() },
@@ -99,7 +100,7 @@ export const kursusRoutes = new Elysia({
       description: "Get a list of all kursus by id siswa",
     },
   })
-  
+
   .get("/recommendations", controller.getRecommendations, {
     beforeHandle: [authenticate()],
     response: { 200: defaultResponse() },
@@ -109,15 +110,26 @@ export const kursusRoutes = new Elysia({
       description: "Get a list of recommended kursus for student based on interests",
     },
   })
-  
+
   .patch("/waktu-mengajar", controller.updateWaktuMengajar, {
     beforeHandle: [authenticate()],
     response: { 200: defaultResponse() },
     body: updateWaktuMengajarBody,
     detail: {
       tags: ["Kursus"],
-      summary: "Update Waktu Mengajar",
-      description: "Update the teaching schedule of a kursus", 
+      summary: "Update Waktu Mengajar dan Mode",
+      description: "Update the teaching schedule of a kursus",
+    },
+  })
+
+  .delete("/delete/:id_kursus", controller.deleteKursus, {
+    beforeHandle: [authenticate()],
+    response: { 200: defaultResponse() },
+    params: deleteKursusParams,
+    detail: {
+      tags: ["Kursus"],
+      summary: "Delete Kursus",
+      description: "Delete a kursus by ID Relawan",
     },
   });
 

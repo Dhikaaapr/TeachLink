@@ -270,6 +270,14 @@
 .settLabel { font-size: 12px; font-weight: 600; color: var(--gray-900); margin: 0 0 2px; }
 .settDesc  { font-size: 10px; color: var(--gray-400); margin: 0; }
 
+/* Pengaturan */
+.settCard  { background: var(--white); border-radius: var(--r-xl); border: 0.5px solid var(--gray-200); padding: 14px; margin-bottom: 10px; }
+.settTitle { font-size: 13px; font-weight: 700; color: var(--gray-900); margin: 0 0 12px; padding-bottom: 8px; border-bottom: 0.5px solid var(--gray-200); }
+.settRow   { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--gray-100); gap: 12px; }
+.settRow:last-child { border-bottom: none; padding-bottom: 0; }
+.settLabel { font-size: 12px; font-weight: 600; color: var(--gray-900); margin: 0 0 2px; }
+.settDesc  { font-size: 10px; color: var(--gray-400); margin: 0; }
+
 /* Toggle */
 .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
 .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }

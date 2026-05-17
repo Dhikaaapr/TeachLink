@@ -10,6 +10,7 @@ export async function insertKursus(data: any) {
     waktu_selesai,
     id_pelajaran,
     mode,
+    url_gmeet,
   } = data;
 
   const sql = `
@@ -19,9 +20,10 @@ export async function insertKursus(data: any) {
       waktu_mulai,
       waktu_selesai,
       id_pelajaran,
-      mode
+      mode,
+      url_gmeet
     ) VALUES (
-      $1, $2, $3, $4, $5, $6
+      $1, $2, $3, $4, $5, $6, $7
     )
     RETURNING 
       id_kursus,
@@ -30,7 +32,8 @@ export async function insertKursus(data: any) {
       waktu_mulai,
       waktu_selesai,
       id_pelajaran,
-      mode;
+      mode,
+      url_gmeet;
   `;
 
   const rows = await queryDB(sql, [
@@ -40,6 +43,7 @@ export async function insertKursus(data: any) {
     waktu_selesai,
     id_pelajaran,
     mode,
+    url_gmeet || null,
   ]);
 
   return formatResult(rows, "create");
@@ -77,14 +81,15 @@ export async function getKursusByRelawan(id_relawan: number) {
   const sql = `
     SELECT 
       k.id_kursus,
-      p.full_name,
+      m.full_name AS full_name,
       pr.nama_provinsi,
       kb.nama_kabupaten,
       pl.nama_pelajaran,
       k.tanggal_mengajar,
       k.waktu_mulai,
       k.waktu_selesai,
-      k.mode
+      k.mode,
+      k.url_gmeet
     FROM kursus k
     INNER JOIN pengguna p 
       ON k.id_relawan = p.user_id
@@ -94,6 +99,10 @@ export async function getKursusByRelawan(id_relawan: number) {
       ON p.id_kabupaten = kb.id_kabupaten
     INNER JOIN pelajaran pl 
       ON k.id_pelajaran = pl.id_pelajaran
+    LEFT JOIN detail_kursus dk 
+      ON k.id_kursus = dk.id_kursus AND dk.keterangan = 'ACC'
+    LEFT JOIN pengguna m 
+      ON dk.id_siswa = m.user_id
     WHERE k.id_relawan = $1
       AND k.tanggal_mengajar >= CURRENT_DATE
     ORDER BY k.tanggal_mengajar ASC, k.waktu_mulai ASC
@@ -103,7 +112,7 @@ export async function getKursusByRelawan(id_relawan: number) {
 
   return formatResult(rows, "getAll");
 }
-  
+
 export async function insertRequestKursus(data: any) {
   const { id_siswa, id_kursus } = data;
 
@@ -163,7 +172,7 @@ export async function getRequestKursus(id_relawan: number, keterangan: string) {
     params.push(keterangan);
   }
 
-  sql += ` ORDER BY k.tanggal_mengajar ASC`;  
+  sql += ` ORDER BY k.tanggal_mengajar ASC`;
 
   const rows = await queryDB(sql, params);
 
@@ -200,11 +209,16 @@ export async function getFilterKursus(filters: {
         INNER JOIN pelajaran 
             ON kursus.id_pelajaran = pelajaran.id_pelajaran
         WHERE 1=1
+          AND NOT EXISTS (
+            SELECT 1 FROM detail_kursus dk
+            WHERE dk.id_kursus = kursus.id_kursus
+              AND dk.keterangan = 'ACC'
+          )
     `;
 
   const values: any[] = [];
   let idx = 1;
-       
+
   if (filters.nama_pelajaran) {
     sql += ` AND (pelajaran.nama_pelajaran ILIKE $${idx} OR pengguna.full_name ILIKE $${idx})`;
     values.push(`%${filters.nama_pelajaran}%`);
@@ -380,6 +394,11 @@ export async function getRecommendations(id_siswa: string) {
         (v.match_score + CASE WHEN pel.nama_pelajaran ILIKE ANY (SELECT '%' || trim(interest) || '%' FROM student_interests) THEN 3 ELSE 0 END) as final_score
       FROM all_volunteers v
       INNER JOIN kursus k ON v.user_id = k.id_relawan AND k.tanggal_mengajar >= CURRENT_DATE
+        AND NOT EXISTS (
+          SELECT 1 FROM detail_kursus dk
+          WHERE dk.id_kursus = k.id_kursus
+            AND dk.keterangan = 'ACC'
+        )
       INNER JOIN pelajaran pel ON k.id_pelajaran = pel.id_pelajaran
       ORDER BY v.user_id, k.tanggal_mengajar ASC
     ) unique_volunteers
@@ -391,14 +410,25 @@ export async function getRecommendations(id_siswa: string) {
   return formatResult(rows, "getAll");
 }
 
-export async function updateWaktuMengajar(id_kursus: number, waktu_mulai: string, waktu_selesai: string) {
+export async function updateWaktuMengajar(id_kursus: number, waktu_mulai: string, waktu_selesai: string, mode: string, url_gmeet?: string) {
   const sql = `
     UPDATE kursus 
     SET waktu_mulai = $2,
-        waktu_selesai = $3
+        waktu_selesai = $3,
+        mode = $4,
+        url_gmeet = $5
     WHERE id_kursus = $1
   `;
 
-  const result = await queryDB(sql, [id_kursus, waktu_mulai, waktu_selesai]);
+  const result = await queryDB(sql, [id_kursus, waktu_mulai, waktu_selesai, mode, url_gmeet || null]);
   return formatResult(result, "update");
+}
+
+export async function deleteKursus(id_kursus: number, id_relawan: number) {
+  const sql = `
+    DELETE FROM kursus
+    WHERE id_kursus = $1 AND id_relawan = $2
+  `;
+  const result = await queryDB(sql, [id_kursus, id_relawan]);
+  return formatResult(result, "delete");
 }

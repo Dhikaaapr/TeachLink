@@ -9,32 +9,33 @@ export const kursusBody = t.Object({
   mode: t.Union([
     t.Literal("online"),
     t.Literal("offline")
-  ])
+  ]),
+  url_gmeet: t.Optional(t.String())
 });
 
 export type insertKursusBodyDTO = typeof kursusBody.static;
 
 export const getKursusByRelawanParams = t.Object({
-    id_relawan: t.Number({ min: 1 }),
+  id_relawan: t.Number({ min: 1 }),
 });
 
 export type GetKursusByRelawanParamsDTO = typeof getKursusByRelawanParams.static;
 
 export const insertRequestKursusBody = t.Object({
-    id_siswa: t.Number({ min: 1 }),
-    id_kursus: t.Number({ min: 1 }),
+  id_siswa: t.Number({ min: 1 }),
+  id_kursus: t.Number({ min: 1 }),
 });
 
 export type InsertRequestKursusBodyDTO = typeof insertRequestKursusBody.static;
 
 export const getRequestKursusQuery = t.Object({
-    id_relawan: t.Number({ min: 1 }),
-    keterangan: t.Union([
-        t.Literal("PENDING"),
-        t.Literal("ACC"),
-        t.Literal("DECLINE"),
-        t.Literal("ALL")
-    ])
+  id_relawan: t.Number({ min: 1 }),
+  keterangan: t.Union([
+    t.Literal("PENDING"),
+    t.Literal("ACC"),
+    t.Literal("DECLINE"),
+    t.Literal("ALL")
+  ])
 });
 
 export type GetRequestKursusQueryDTO = typeof getRequestKursusQuery.static;
@@ -59,12 +60,12 @@ export const updateRequestKursusParams = t.Object({
 export type UpdateRequestKursusParamsDTO = typeof updateRequestKursusParams.static;
 
 export const getKursusBySiswaQuery = t.Object({
-    id_siswa: t.Number({ min: 1 }),
-    status: t.Union([
-        t.Literal("ALL"),
-        t.Literal("SELESAI"),
-        t.Literal("BELUM")
-    ])
+  id_siswa: t.Number({ min: 1 }),
+  status: t.Union([
+    t.Literal("ALL"),
+    t.Literal("SELESAI"),
+    t.Literal("BELUM")
+  ])
 });
 
 export type GetKursusBySiswaQueryDTO = typeof getKursusBySiswaQuery.static;
@@ -73,6 +74,17 @@ export const updateWaktuMengajarBody = t.Object({
   id_kursus: t.Number({ min: 1 }),
   waktu_mulai: t.String({ pattern: "^([01]\\d|2[0-3]):([0-5]\\d)$" }), // HH:mm
   waktu_selesai: t.String({ pattern: "^([01]\\d|2[0-3]):([0-5]\\d)$" }), // HH:mm
+  mode: t.Union([
+    t.Literal("online"),
+    t.Literal("offline")
+  ]),
+  url_gmeet: t.Optional(t.String())
 });
 
 export type UpdateWaktuMengajarBodyDTO = typeof updateWaktuMengajarBody.static;
+
+export const deleteKursusParams = t.Object({
+  id_kursus: t.Number()
+})
+
+export type DeleteKursusParamsDTO = typeof deleteKursusParams.static;

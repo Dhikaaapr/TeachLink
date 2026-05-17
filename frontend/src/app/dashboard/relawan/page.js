@@ -8,26 +8,7 @@ import { apiRequestWithRetry } from "../../../utils/api";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
 /* ─────────────── KONSTANTA ─────────────── */
-const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-const SUBJECT_POOL = ['Matematika','Sejarah','Fisika','Matematika','Sejarah','Fisika'];
-const GMEET_POOL   = [
-  'meet.google.com/abc-def','meet.google.com/ghi-jkl','meet.google.com/mno-pqr',
-  'meet.google.com/stu-vwx','meet.google.com/yza-bcd','meet.google.com/efg-hij',
-];
-const KOTA_LIST  = ['Jakarta Selatan','Jakarta Timur','Jakarta Pusat','Bandung','Surabaya','Depok','Bekasi'];
-const ALL_MAPEL  = ['Matematika','Fisika','Kimia','Biologi','Bahasa Inggris','Sejarah'];
-const SESI_TIMES = [{ s:'15:00', e:'16:30' }, { s:'17:00', e:'18:00' }];
 const AV_COLORS  = ['#D85A30','#185FA5','#BA7517','#1D9E75','#993556','#534AB7'];
-
-const MAPEL_OPTIONS = [
-  { id: 1, label: 'Matematika',    icon: '∑' },
-  { id: 2, label: 'Bahasa Inggris', icon: 'Aa' },
-  { id: 3, label: 'Fisika',        icon: '⚛' },
-  { id: 4, label: 'Kimia',         icon: '⚗' },
-  { id: 5, label: 'Biologi',       icon: '🌿' },
-  { id: 6, label: 'Sejarah',       icon: '📜' },
-];
-
 const MAPEL_COLOR = {
   1: { bg: 'var(--coral-light)', color: 'var(--coral)' },
   2: { bg: 'var(--blue-light)',  color: 'var(--blue)'  },
@@ -38,28 +19,9 @@ const MAPEL_COLOR = {
 };
 
 /* ─────────────── DATA MOCK ─────────────── */
-const TODAY_SESSIONS = [
-  {
-    mapel:'Matematika', sesi:1, jam:'15:00', end:'16:30', mode:'Online',
-    gmeet:'meet.google.com/abc-def',
-    siswa:[{n:'Rafi Ahmad',c:'#1D9E75'},{n:'Bima Putra',c:'#185FA5'},{n:'Aisyah Nur',c:'#BA7517'}],
-  },
-  {
-    mapel:'Sejarah', sesi:2, jam:'17:00', end:'18:00', mode:'Online',
-    gmeet:'meet.google.com/ghi-jkl',
-    siswa:[{n:'Maya Sari',c:'#D85A30'},{n:'Dina Kusuma',c:'#1D9E75'}],
-  },
-];
-
 const CERT_DATA = [
   { mapel:'Matematika', level:'SMA', siswa:8, rating:4.9, status:'done',     periode:'Apr–Okt 2025', from:'#D85A30', to:'#F0997B' },
   { mapel:'Fisika',     level:'SMA', siswa:4, rating:4.8, status:'progress', bulan:2, total:6, mulai:'Feb 2026', target:'Agt 2026', from:'#1D9E75', to:'#5DCAA5' },
-];
-
-const INIT_REQUESTS = [
-  { id:1, nama:'Rafi Ahmad',    mapel:'Matematika', tgl:'22 Apr 2026', jam:'16:00', mode:'online',  kota:'Jakarta Selatan', usia:15 },
-  { id:2, nama:'Dina Kusuma',   mapel:'Fisika',     tgl:'23 Apr 2026', jam:'10:00', mode:'offline', kota:'Jakarta Selatan', usia:17 },
-  { id:3, nama:'Farhan Hidayat',mapel:'Kimia',      tgl:'24 Apr 2026', jam:'14:00', mode:'online',  kota:'Depok',           usia:16 },
 ];
 
 /* ─────────────── HELPERS ─────────────── */
@@ -68,7 +30,6 @@ function getInitials(name) {
   return name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
 }
 function avColor(i) { return AV_COLORS[i % AV_COLORS.length]; }
-function getDayName(d) { return ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d]; }
 
 function getDurMins(start, end) {
   if (!start || !end) return 0;
@@ -84,27 +45,6 @@ function fmtDur(mins) {
   return `${h} jam ${m} menit`;
 }
 
-function getScheduleWeeks(month, year) {
-  const sessions = [];
-  const dt = new Date(year, month, 1);
-  while (dt.getMonth() === month && sessions.length < 12) {
-    const d = dt.getDay();
-    if (d === 1 || d === 3) {
-      const idx = sessions.length % SUBJECT_POOL.length;
-      sessions.push({
-        label: `${getDayName(d)}, ${dt.getDate()} ${MONTHS[month]} ${year}`,
-        subj:  SUBJECT_POOL[idx],
-        gmeet: GMEET_POOL[idx],
-      });
-    }
-    dt.setDate(dt.getDate() + 1);
-  }
-  const weeks = [];
-  for (let i = 0; i < sessions.length; i += 2) {
-    weeks.push({ w: Math.floor(i/2)+1, ss: sessions.slice(i, i+2) });
-  }
-  return weeks;
-}
 
 function ModeTag({ mode }) {
   if (mode === 'online')  return <span className={styles.mOn}>Online</span>;
@@ -123,7 +63,7 @@ const EMPTY_FORM = {
   lokasi_offline: '',
 };
 
-function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
+function JadwalModal({ isOpen, onClose, onSubmit, editData, loading, mapelOptions = [] }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
@@ -131,7 +71,7 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
     if (isOpen) {
       if (editData) {
         setForm({
-          id_pelajaran:    editData.id_pelajaran || 1,
+          id_pelajaran:    editData.id_pelajaran || (mapelOptions[0]?.id || 1),
           tanggal_mengajar: editData.tanggal_mengajar
             ? new Date(editData.tanggal_mengajar).toISOString().split('T')[0]
             : new Date().toISOString().split('T')[0],
@@ -142,11 +82,14 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
           lokasi_offline: editData.lokasi_offline || '',
         });
       } else {
-        setForm(EMPTY_FORM);
+        setForm({
+          ...EMPTY_FORM,
+          id_pelajaran: mapelOptions[0]?.id || 1,
+        });
       }
       setErrors({});
     }
-  }, [isOpen, editData]);
+  }, [isOpen, editData, mapelOptions]);
 
   const durMins = getDurMins(form.waktu_mulai, form.waktu_selesai);
   const durValid = durMins >= 60 && durMins <= 180;
@@ -163,9 +106,6 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
     }
     if (form.mode === 'online' && !form.url_gmeet.trim()) {
       e.url_gmeet = 'Link Google Meet wajib diisi untuk mode online';
-    }
-    if (form.mode === 'offline' && !form.lokasi_offline.trim()) {
-      e.lokasi_offline = 'Lokasi tempat mengajar wajib diisi untuk mode offline';
     }
     return e;
   }
@@ -218,8 +158,9 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
               className={styles.mInput}
               value={form.id_pelajaran}
               onChange={e => set('id_pelajaran', parseInt(e.target.value))}
+              disabled={!!editData}
             >
-              {MAPEL_OPTIONS.map(m => (
+              {mapelOptions.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.icon}  {m.label}
                 </option>
@@ -236,6 +177,7 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
               value={form.tanggal_mengajar}
               onChange={e => set('tanggal_mengajar', e.target.value)}
               required
+              disabled={!!editData}
             />
           </div>
 
@@ -264,18 +206,6 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
               {errors.waktu_selesai && <p className={styles.mErr}>{errors.waktu_selesai}</p>}
             </div>
           </div>
-
-          {/* ── Durasi indicator ── */}
-          {form.waktu_mulai && form.waktu_selesai && (
-            <div className={styles.durBox} style={{ background: durBg, borderColor: durColor }}>
-              <span style={{ fontSize: 14 }}>{durValid ? '✓' : durMins > 180 ? '⚠' : '○'}</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: durColor }}>
-                {durMins > 0
-                  ? `Durasi: ${fmtDur(durMins)}${!durValid ? (durMins < 60 ? ' — minimal 1 jam' : ' — maksimal 3 jam') : ''}`
-                  : 'Waktu selesai harus setelah waktu mulai'}
-              </span>
-            </div>
-          )}
 
           {/* ── Mode Mengajar ── */}
           <div className={styles.mField}>
@@ -332,29 +262,6 @@ function JadwalModal({ isOpen, onClose, onSubmit, editData, loading }) {
             </div>
           )}
 
-          {/* ── Lokasi tempat mengajar (hanya muncul kalau offline) ── */}
-          {form.mode === 'offline' && (
-            <div className={styles.mField}>
-              <label className={styles.mLabel}>Lokasi Tempat Mengajar</label>
-              <div className={`${styles.lokasiInputWrap} ${errors.lokasi_offline ? styles.gmeetInputErr : ''}`}>
-                <span className={styles.gmeetPrefix}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-                    <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  className={styles.gmeetInput}
-                  placeholder="cth: Perpustakaan Depok, Rumah siswa, dll."
-                  value={form.lokasi_offline}
-                  onChange={e => set('lokasi_offline', e.target.value)}
-                />
-              </div>
-              {errors.lokasi_offline && <p className={styles.mErr}>{errors.lokasi_offline}</p>}
-              <p className={styles.gmeetHint}>Isi dengan nama tempat atau alamat lengkap</p>
-            </div>
-          )}
 
           {/* ── Footer ── */}
           <div className={styles.modalFoot}>
@@ -380,15 +287,12 @@ export default function DashboardRelawan() {
   };
 
   const [tab, setTab]           = useState('overview');
-  const [requests, setRequests] = useState(INIT_REQUESTS);
   const [reqFilter, setReqFilter] = useState('all');
 
   const [isOnline, setIsOnline]     = useState(true);
   const [relMode, setRelMode]       = useState('online');
   const [relKota, setRelKota]       = useState('Jakarta Selatan');
   const [mapelActive, setMapelActive] = useState(['Matematika','Fisika']);
-
-  const [curMonth, setCurMonth] = useState(3);
 
   const [toast, setToast]         = useState('');
   const [toastShow, setToastShow] = useState(false);
@@ -400,6 +304,7 @@ export default function DashboardRelawan() {
   const [loadingReqs, setLoadingReqs]           = useState(false);
   const [realKursusCreated, setRealKursusCreated] = useState([]);
   const [loadingKursus, setLoadingKursus]       = useState(false);
+  const [pelajaranList, setPelajaranList]       = useState([]);
 
   /* ── Modal state ── */
   const [showModal, setShowModal]   = useState(false);
@@ -412,7 +317,7 @@ export default function DashboardRelawan() {
       const fetchRequests = async () => {
         setLoadingReqs(true);
         try {
-          const res = await apiRequestWithRetry(`/kursus/requests?id_relawan=${user.user_id}&keterangan=ALL`);
+          const res = await apiRequestWithRetry(`/kursus/requests?id_relawan=${user.user_id}&keterangan=PENDING`);
           if (res.success) setRealRequests(res.data || []);
         } catch (err) {
           console.error('Failed to fetch requests:', err);
@@ -440,20 +345,102 @@ export default function DashboardRelawan() {
 
   useEffect(() => { fetchCreatedKursus(); }, [fetchCreatedKursus]);
 
+  /* ── Fetch pelajaran ── */
+  useEffect(() => {
+    const fetchPelajaran = async () => {
+      try {
+        const res = await apiRequestWithRetry('/pelajaran/all');
+        if (res.success) {
+          setPelajaranList(res.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pelajaran:', err);
+      }
+    };
+    fetchPelajaran();
+  }, []);
+
+  const pelajaranOptions = useMemo(() => {
+    const defaultIcons = {
+      'matematika': '∑',
+      'bahasa inggris': 'Aa',
+      'fisika': '⚛',
+      'kimia': '⚗',
+      'biologi': '🌿',
+      'sejarah': '📜'
+    };
+    
+    if (pelajaranList.length === 0) {
+      return [];
+    }
+    
+    return pelajaranList.map(p => {
+      const lower = p.nama_pelajaran.toLowerCase();
+      let icon = '📖';
+      for (const [key, val] of Object.entries(defaultIcons)) {
+        if (lower.includes(key)) {
+          icon = val;
+          break;
+        }
+      }
+      return {
+        id: p.id_pelajaran,
+        label: p.nama_pelajaran,
+        icon: icon
+      };
+    });
+  }, [pelajaranList]);
+
+  /* ── Filter Sesi Hari Ini ── */
+  const todaySessions = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    return realKursusCreated.filter(s => {
+      // 1. Harus udah ada siswanya
+      if (!s.full_name) return false;
+      
+      // 2. Tanggal mengajar harus sama dengan tanggal hari ini
+      if (!s.tanggal_mengajar) return false;
+      const scheduleDate = new Date(s.tanggal_mengajar);
+      const scheduleDateStr = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth() + 1).padStart(2, '0')}-${String(scheduleDate.getDate()).padStart(2, '0')}`;
+      return scheduleDateStr === todayStr;
+    });
+  }, [realKursusCreated]);
+
+  /* ── Filter Jumlah Siswa Aktif Unik ── */
+  const activeSiswaCount = useMemo(() => {
+    return realKursusCreated.filter(k => k.full_name).length;
+  }, [realKursusCreated]);
+
   /* ── CRUD handlers ── */
   async function handleSubmitJadwal(formData) {
     setFormLoading(true);
     try {
       let res;
       if (editData) {
-        res = await apiRequestWithRetry(`/kursus/kursus/${editData.id_kursus}`, {
+        res = await apiRequestWithRetry('/kursus/waktu-mengajar', {
           method: 'PATCH',
-          body: { ...formData, id_relawan: user.user_id },
+          body: {
+            id_kursus: editData.id_kursus,
+            waktu_mulai: formData.waktu_mulai.slice(0, 5),
+            waktu_selesai: formData.waktu_selesai.slice(0, 5),
+            mode: formData.mode,
+            url_gmeet: formData.url_gmeet || '',
+          },
         });
       } else {
         res = await apiRequestWithRetry('/kursus/kursus', {
           method: 'POST',
-          body: { ...formData, id_relawan: user.user_id },
+          body: {
+            id_relawan: parseInt(user.user_id),
+            tanggal_mengajar: formData.tanggal_mengajar,
+            waktu_mulai: formData.waktu_mulai.slice(0, 5),
+            waktu_selesai: formData.waktu_selesai.slice(0, 5),
+            id_pelajaran: parseInt(formData.id_pelajaran),
+            mode: formData.mode,
+            url_gmeet: formData.mode === 'online' ? (formData.url_gmeet || '') : undefined,
+          },
         });
       }
       if (res.success) {
@@ -474,7 +461,7 @@ export default function DashboardRelawan() {
   async function handleDeleteJadwal(id_kursus) {
     if (!confirm('Hapus jadwal ini?')) return;
     try {
-      const res = await apiRequestWithRetry(`/kursus/kursus/${id_kursus}`, { method: 'DELETE' });
+      const res = await apiRequestWithRetry(`/kursus/delete/${id_kursus}`, { method: 'DELETE' });
       if (res.success) {
         setRealKursusCreated(prev => prev.filter(j => j.id_kursus !== id_kursus));
         showToast('Jadwal berhasil dihapus');
@@ -494,8 +481,6 @@ export default function DashboardRelawan() {
     ? realRequests.slice(0, 3)
     : reqFilter === 'all' ? realRequests : realRequests.filter(r => r.mode === reqFilter);
 
-  const displayKursus = realKursusCreated.length > 0 ? realKursusCreated : TODAY_SESSIONS;
-
   function showToast(msg) {
     setToast(msg); setToastShow(true);
     setTimeout(() => setToastShow(false), 3000);
@@ -507,6 +492,7 @@ export default function DashboardRelawan() {
       if (res.success) {
         setRealRequests(prev => prev.filter(x => x.id_detail_kursus !== id));
         showToast('Request berhasil dikonfirmasi!');
+        fetchCreatedKursus();
       }
     } catch (err) {
       showToast(`Gagal: ${err.message}`);
@@ -528,14 +514,12 @@ export default function DashboardRelawan() {
     setTimeout(() => setSettToastShow(false), 3500);
   }
 
-  const scheduleWeeks = getScheduleWeeks(curMonth, 2026);
-
   const navItems = [
     { id:'overview', label:'Dashboard' },
-    { id:'requests', label:'Permintaan', badge: realRequests.length || requests.length },
+    { id:'requests', label:'Permintaan', badge: realRequests.length },
     { id:'schedule', label:'Jadwal' },
-    { id:'cert',     label:'Sertifikat' },
-    { id:'settings', label:'Pengaturan' },
+    { id:'settings', label:'Kursus' },
+    { id:'cert',     label:'Sertifikat' }
   ];
 
   /* ── Helper: format tanggal untuk blok kecil ── */
@@ -612,22 +596,17 @@ export default function DashboardRelawan() {
                   <h1 className={styles.pageTitle}>Halo, Kak {user?.full_name?.split(' ')[0] || 'User'}! 🧡</h1>
                   <p className={styles.pageDesc}>
                     {new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'short', year:'numeric' })}
-                    {' · '}{displayKursus.length} sesi terdaftar
                   </p>
                 </div>
                 <div style={{ display:'flex', gap:12, alignItems:'center' }}>
                   <button className={styles.btnCoral} onClick={openAddModal}>+ Tambah Jadwal</button>
-                  <div className={styles.modePill}>
-                    <ModeTag mode={relMode} />
-                    <span className={styles.kotaText}>📍 {relKota}</span>
-                  </div>
                 </div>
               </header>
 
               <div className={styles.statsGrid}>
-                <StatCard icon="users" color="teal"  value="12"                   label="Siswa Aktif"   />
+                <StatCard icon="users" color="teal"  value={activeSiswaCount}      label="Siswa Aktif"   />
                 <StatCard icon="star"  color="amber" value="4.9"                  label="Rating"        />
-                <StatCard icon="chat"  color="blue"  value={realRequests.length || requests.length} label="Request Masuk" />
+                <StatCard icon="chat"  color="blue"  value={realRequests.length} label="Request Masuk" />
               </div>
 
               <div className={styles.grid2}>
@@ -639,54 +618,39 @@ export default function DashboardRelawan() {
                   </div>
                   {loadingKursus ? (
                     <div className={styles.empty}>Memuat sesi...</div>
-                  ) : displayKursus.length === 0 ? (
-                    <div className={styles.empty}>Belum ada sesi</div>
-                  ) : displayKursus.slice(0, 3).map((s, i) => {
-                    const isReal = !!s.id_kursus;
-                    const dateInfo = isReal ? fmtDateBlock(s.tanggal_mengajar) : null;
+                  ) : todaySessions.length === 0 ? (
+                    <div className={styles.empty}>Tidak ada sesi mengajar untuk hari ini</div>
+                  ) : todaySessions.slice(0, 3).map((s, i) => {
+                    const dateInfo = fmtDateBlock(s.tanggal_mengajar);
                     const accentColor = i === 0 ? 'var(--coral)' : 'var(--teal)';
                     const accentBg    = i === 0 ? 'var(--coral-light)' : 'var(--teal-light)';
                     const accentMid   = i === 0 ? '#F0997B' : '#5DCAA5';
 
                     return (
-                      <div key={isReal ? `real-s-${s.id_kursus}` : `mock-s-${i}`} className={styles.todayCard}>
-                        {/* ── blok kiri: tanggal (real) atau jam (mock) ── */}
+                      <div key={`real-s-${s.id_kursus}`} className={styles.todayCard}>
+                        {/* ── blok kiri: tanggal ── */}
                         <div className={styles.timeBlock} style={{ background: accentBg }}>
-                          {isReal ? (
-                            <>
-                              <p className={styles.timeDay}  style={{ color: accentColor }}>{dateInfo.day}</p>
-                              <p className={styles.timeMon}  style={{ color: accentMid  }}>{dateInfo.month}</p>
-                            </>
-                          ) : (
-                            <>
-                              <p className={styles.timeVal} style={{ color: accentColor }}>{s.jam}</p>
-                              <p className={styles.timeWib} style={{ color: accentMid  }}>WIB</p>
-                            </>
-                          )}
+                          <p className={styles.timeDay}  style={{ color: accentColor }}>{dateInfo.day}</p>
+                          <p className={styles.timeMon}  style={{ color: accentMid  }}>{dateInfo.month}</p>
                         </div>
 
                         <div className={styles.todayBody}>
-                          {/* nama mapel saja — tanggal sudah di blok kiri */}
                           <p className={styles.todayMapel}>
-                            {isReal ? s.nama_pelajaran : `${s.mapel} — Sesi ${s.sesi}`}
+                            {s.nama_pelajaran}
                           </p>
                           <p className={styles.todayMeta}>
-                            {s.mode} • {isReal
-                              ? `${s.waktu_mulai?.slice(0,5)}–${s.waktu_selesai?.slice(0,5)}`
-                              : `${s.jam}–${s.end}`}
+                            {s.mode} • {s.waktu_mulai?.slice(0,5)}–{s.waktu_selesai?.slice(0,5)} WIB
                           </p>
                           <div className={styles.siswaChips}>
-                            {isReal ? (
-                              <span className={styles.siswaChip} style={{ background:'var(--teal-light)', color:'var(--teal-dark)' }}>{s.full_name}</span>
-                            ) : s.siswa.map((sw, j) => (
-                              <span key={j} className={styles.siswaChip} style={{ background:'var(--teal-light)', color:'var(--teal-dark)' }}>{sw.n}</span>
-                            ))}
+                            <span className={styles.siswaChip} style={{ background:'var(--teal-light)', color:'var(--teal-dark)' }}>{s.full_name}</span>
                           </div>
-                          <a
-                            href={`https://${isReal ? (s.url_gmeet || 'meet.google.com') : s.gmeet}`}
-                            target="_blank" rel="noreferrer"
-                            className={styles.meetLink}
-                          >▶ Buka Meet</a>
+                          {s.mode === 'online' && s.url_gmeet && (
+                            <a
+                              href={`https://${s.url_gmeet.replace(/^https?:\/\//, '')}`}
+                              target="_blank" rel="noreferrer"
+                              className={styles.meetLink}
+                            >▶ Buka Meet</a>
+                          )}
                         </div>
                       </div>
                     );
@@ -774,24 +738,30 @@ export default function DashboardRelawan() {
               <header className={styles.topBar}>
                 <div>
                   <h1 className={styles.pageTitle}>Jadwal Mengajar</h1>
-                  <p className={styles.pageDesc}>{realKursusCreated.length} jadwal terdaftar · Kelola sesi mengajarmu</p>
+                  <p className={styles.pageDesc}>{realKursusCreated.filter(k => k.full_name).length} sesi aktif · Kelola sesi mengajarmu yang telah dipesan siswa</p>
                 </div>
                 <div style={{ display:'flex', gap:10, alignItems:'center' }}>
                   <button className={styles.btnCoral} onClick={openAddModal}>+ Tambah Jadwal</button>
-                  <div className={styles.monthNav}>
-                    <button className={styles.mnBtn} onClick={() => setCurMonth(m => Math.max(3, m - 1))}>‹</button>
-                    <span className={styles.mnLabel}>{MONTHS[curMonth]} 2026</span>
-                    <button className={styles.mnBtn} onClick={() => setCurMonth(m => Math.min(8, m + 1))}>›</button>
-                  </div>
                 </div>
               </header>
 
-              {realKursusCreated.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize:12, fontWeight:700, color:'var(--gray-500)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Jadwal Kamu</p>
-                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-                    {realKursusCreated.map(k => {
-                      const mapelObj = MAPEL_OPTIONS.find(m => m.id === k.id_pelajaran) || MAPEL_OPTIONS[0];
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                    Jadwal Kamu
+                  </p>
+                  <span style={{ fontSize: 10, background: 'var(--teal-light)', color: 'var(--teal-dark)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                    {realKursusCreated.filter(k => k.full_name).length} Sesi Aktif
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {realKursusCreated.filter(k => k.full_name).length === 0 ? (
+                    <div className={styles.empty} style={{ padding: '24px', borderRadius: '12px', border: '1px dashed var(--gray-200)', background: 'var(--gray-50)', color: 'var(--gray-400)', textAlign: 'center', fontSize: '13px' }}>
+                      ✨ Belum ada jadwal yang dipesan oleh murid. Tunggu request masuk di tab Permintaan!
+                    </div>
+                  ) : (
+                    realKursusCreated.filter(k => k.full_name).map(k => {
+                      const mapelObj = pelajaranOptions.find(m => m.id === k.id_pelajaran) || pelajaranOptions[0] || { label: k.nama_pelajaran || 'Pelajaran', icon: '📖' };
                       const clr = MAPEL_COLOR[k.id_pelajaran] || MAPEL_COLOR[1];
                       const dur = getDurMins(k.waktu_mulai?.slice(0,5), k.waktu_selesai?.slice(0,5));
                       return (
@@ -800,7 +770,9 @@ export default function DashboardRelawan() {
                             <span style={{ fontSize: 16 }}>{mapelObj.icon}</span>
                           </div>
                           <div className={styles.jadwalItemInfo}>
-                            <p className={styles.jadwalItemMapel}>{k.nama_pelajaran || mapelObj.label}</p>
+                            <p className={styles.jadwalItemMapel}>
+                              {k.nama_pelajaran || mapelObj.label} - <span style={{ color: 'var(--coral)', fontWeight: 600 }}>{k.full_name}</span>
+                            </p>
                             <p className={styles.jadwalItemMeta}>
                               📅 {new Date(k.tanggal_mengajar).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
                               {' · '}<span>⏰</span> {k.waktu_mulai?.slice(0,5)}–{k.waktu_selesai?.slice(0,5)} WIB
@@ -825,29 +797,11 @@ export default function DashboardRelawan() {
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
+                    })
+                  )}
                 </div>
-              )}
-
-              <p style={{ fontSize:12, fontWeight:700, color:'var(--gray-500)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Template Jadwal — Apr–Sep 2026</p>
-              <div className={styles.jadwalGrid}>
-                {scheduleWeeks.map(w => (
-                  <div key={w.w} className={styles.weekRow}>
-                    <div className={styles.weekHd}>Minggu ke-{w.w}</div>
-                    {w.ss.map((s, i) => (
-                      <div key={i} className={styles.schedItem}>
-                        <div className={`${styles.schedDot} ${i === 0 ? styles.dc : styles.dt}`} />
-                        <div className={styles.schedInfo}>
-                          <p className={styles.sm}>{s.subj} — Sesi {i + 1}</p>
-                          <p className={styles.smm}>{s.label} • {SESI_TIMES[i].s}–{SESI_TIMES[i].e} WIB</p>
-                        </div>
-                        <a href={`https://${s.gmeet}`} target="_blank" rel="noreferrer" className={styles.meetBtn}>Buka Meet</a>
-                      </div>
-                    ))}
-                  </div>
-                ))}
               </div>
+
             </div>
           )}
 
@@ -918,73 +872,73 @@ export default function DashboardRelawan() {
             <div className={styles.pane}>
               <header className={styles.topBar}>
                 <div>
-                  <h1 className={styles.pageTitle}>Pengaturan Profil</h1>
-                  <p className={styles.pageDesc}>Kelola status, mode, dan lokasi mengajarmu</p>
+                  <h1 className={styles.pageTitle}>Daftar Jadwal</h1>
+                  <p className={styles.pageDesc}>Daftar jadwal yang kamu sediakan untuk direquest oleh siswa</p>
+                </div>
+                <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+                  <button className={styles.btnCoral} onClick={openAddModal}>+ Tambah Jadwal</button>
                 </div>
               </header>
-              <div className={styles.settCard}>
-                <p className={styles.settTitle}>Status & Mode Mengajar</p>
-                <div className={styles.settRow}>
-                  <div>
-                    <p className={styles.settLabel}>Status Ketersediaan</p>
-                    <p className={styles.settDesc}>Aktifkan agar siswa bisa melihat dan merequest sesimu</p>
-                  </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <label className={styles.toggle}>
-                      <input type="checkbox" checked={isOnline} onChange={e => setIsOnline(e.target.checked)} />
-                      <span className={styles.tsl} />
-                    </label>
-                    <span style={{ fontSize:11, fontWeight:600, color: isOnline ? 'var(--green)' : 'var(--gray-400)' }}>
-                      {isOnline ? '● Online' : '○ Offline'}
-                    </span>
-                  </div>
-                </div>
-                <div className={styles.settRow}>
-                  <div>
-                    <p className={styles.settLabel}>Mode Mengajar</p>
-                    <p className={styles.settDesc}>Pilih cara kamu bisa mengajar siswa</p>
-                  </div>
-                  <div className={styles.modeBtns}>
-                    {[
-                      { v:'online',  l:'Online',           cls:styles.mbOn   },
-                      { v:'offline', l:'Offline',          cls:styles.mbOff  },
-                      { v:'both',    l:'Online & Offline', cls:styles.mbBoth },
-                    ].map(m => (
-                      <button key={m.v} className={`${styles.mb} ${relMode === m.v ? m.cls : ''}`} onClick={() => setRelMode(m.v)}>{m.l}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className={styles.settRow}>
-                  <div>
-                    <p className={styles.settLabel}>Mata Pelajaran</p>
-                    <p className={styles.settDesc}>Pilih mapel yang kamu ajarkan (bisa lebih dari 1)</p>
-                  </div>
-                  <div className={styles.mapelTags}>
-                    {ALL_MAPEL.map(m => (
-                      <button
-                        key={m}
-                        className={`${styles.mapelChip} ${mapelActive.includes(m) ? styles.mapelActive : ''}`}
-                        onClick={() => toggleMapel(m)}
-                      >{m}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className={styles.settCard}>
-                <p className={styles.settTitle}>Notifikasi</p>
-                <div className={styles.settRow}>
-                  <div><p className={styles.settLabel}>Notifikasi Request Baru</p><p className={styles.settDesc}>Dapat notif saat ada siswa yang request sesi</p></div>
-                  <label className={styles.toggle}><input type="checkbox" defaultChecked /><span className={styles.tsl} /></label>
-                </div>
-                <div className={styles.settRow}>
-                  <div><p className={styles.settLabel}>Pengingat Jadwal</p><p className={styles.settDesc}>Ingatkan 1 jam sebelum sesi dimulai</p></div>
-                  <label className={styles.toggle}><input type="checkbox" defaultChecked /><span className={styles.tsl} /></label>
+
+              {/* ── SECTION: LIST JADWAL KAMU (Belum Ada Murid) ── */}
+              <div className={styles.settCard} style={{ padding: '16px', marginBottom: '24px' }}>
+              
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {realKursusCreated.filter(k => !k.full_name).length === 0 ? (
+                    <div className={styles.empty} style={{ padding: '24px', borderRadius: '12px', border: '1px dashed var(--gray-200)', background: 'var(--gray-50)', color: 'var(--gray-400)', textAlign: 'center', fontSize: '13px' }}>
+                      Semua jadwal mengajar Anda sudah dipesan oleh murid!
+                    </div>
+                  ) : (
+                    realKursusCreated.filter(k => !k.full_name).map(k => {
+                      const mapelObj = pelajaranOptions.find(m => m.id === k.id_pelajaran) || pelajaranOptions[0] || { label: k.nama_pelajaran || 'Pelajaran', icon: '📖' };
+                      const clr = MAPEL_COLOR[k.id_pelajaran] || MAPEL_COLOR[1];
+                      const dur = getDurMins(k.waktu_mulai?.slice(0,5), k.waktu_selesai?.slice(0,5));
+                      return (
+                        <div key={k.id_kursus} className={styles.jadwalItemCard}>
+                          <div className={styles.jadwalItemIcon} style={{ background: clr.bg, color: clr.color }}>
+                            <span style={{ fontSize: 16 }}>{mapelObj.icon}</span>
+                          </div>
+                          <div className={styles.jadwalItemInfo}>
+                            <p className={styles.jadwalItemMapel}>
+                              {k.nama_pelajaran || mapelObj.label}
+                            </p>
+                            <p className={styles.jadwalItemMeta}>
+                              📅 {new Date(k.tanggal_mengajar).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
+                              {' · '}<span>⏰</span> {k.waktu_mulai?.slice(0,5)}–{k.waktu_selesai?.slice(0,5)} WIB
+                              {dur > 0 && ` (${fmtDur(dur)})`}
+                            </p>
+                            {k.mode === 'online' && k.url_gmeet && (
+                              <a href={`https://${k.url_gmeet}`} target="_blank" rel="noreferrer" className={styles.jadwalMeetLink}>
+                                ▶ {k.url_gmeet}
+                              </a>
+                            )}
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <ModeTag mode={k.mode} />
+                          </div>
+                          <div className={styles.btnRow}>
+                            <button className={styles.btnDecline} onClick={() => openEditModal(k)}>Edit</button>
+                            <button
+                              className={styles.btnDecline}
+                              style={{ color:'#A32D2D' }}
+                              onClick={() => handleDeleteJadwal(k.id_kursus)}
+                            >Hapus</button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
-              <button className={styles.saveBtn} onClick={saveSettings}>Simpan Pengaturan</button>
+
+              
               {settToastShow && <div className={styles.toastMsg}>{settToast}</div>}
             </div>
           )}
+
+       
+
+       
 
         </main>
 
@@ -998,6 +952,7 @@ export default function DashboardRelawan() {
           onSubmit={handleSubmitJadwal}
           editData={editData}
           loading={formLoading}
+          mapelOptions={pelajaranOptions}
         />
 
       </div>

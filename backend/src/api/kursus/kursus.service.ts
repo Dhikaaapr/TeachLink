@@ -1,4 +1,4 @@
-import { insertKursusBodyDTO, getKursusBySiswaQuery} from './kursus.schema';
+import { insertKursusBodyDTO, getKursusBySiswaQuery } from './kursus.schema';
 import { InsertRequestKursusBodyDTO } from './kursus.schema';
 import { GetFilterKursusQueryDTO } from "./kursus.schema";
 import * as model from "./kursus.model";
@@ -28,7 +28,7 @@ export async function getFilterKursus(filters: GetFilterKursusQueryDTO) {
 }
 
 export async function updateRequestKursus(id_detail_kursus: number) {
-  return await model.updateRequestKursus(id_detail_kursus);
+    return await model.updateRequestKursus(id_detail_kursus);
 }
 
 export async function getKursusBySiswa(id_siswa: number, status: string) {
@@ -39,6 +39,10 @@ export async function getRecommendations(id_siswa: string) {
     return await model.getRecommendations(id_siswa);
 }
 
-export async function updateWaktuMengajar(id_kursus: number, waktu_mulai: string, waktu_selesai: string) {
-  return await model.updateWaktuMengajar(id_kursus, waktu_mulai, waktu_selesai);
+export async function updateWaktuMengajar(id_kursus: number, waktu_mulai: string, waktu_selesai: string, mode: string, url_gmeet?: string) {
+    return await model.updateWaktuMengajar(id_kursus, waktu_mulai, waktu_selesai, mode, url_gmeet);
+}
+
+export async function deleteKursus(id_kursus: number, id_relawan: number) {
+    return await model.deleteKursus(id_kursus, id_relawan);
 }
