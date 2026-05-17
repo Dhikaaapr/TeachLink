@@ -5,10 +5,6 @@
     "moduleResolution": "bundler",
     "types": ["bun-types", "node"],
     "baseUrl": ".",
-    "paths": {
-      "*": ["../node_modules/*"]
-    },
-    "typeRoots": ["../node_modules/@types"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
