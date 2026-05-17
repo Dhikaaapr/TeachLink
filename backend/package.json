@@ -3,8 +3,10 @@
   "version": "0.2.2",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No build required for Elysia/Bun\"",
     "dev": "npx tsx watch src/server.ts",
-    "dev:bun": "bun run --watch src/server.ts"
+    "dev:bun": "bun run --watch src/server.ts",
+    "start": "bun run src/server.ts"
   },
   "dependencies": {
     "@elysiajs/cookie": "^0.8.0",
