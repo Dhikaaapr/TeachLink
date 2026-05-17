@@ -1,0 +1,14 @@
+[providers]
+bun = "1.x"
+
+[phases.setup]
+nixPkgs = ["bun"]
+
+[phases.install]
+cmds = ["bun install"]
+
+[phases.build]
+cmds = ["echo 'No build required'"]
+
+[start]
+cmd = "bun run src/server.ts"
