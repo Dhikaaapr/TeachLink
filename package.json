@@ -9,6 +9,8 @@
   "scripts": {
     "dev:backend": "cd backend && npx tsx watch src/server.ts",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev": "npm run dev:backend & npm run dev:frontend"
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "build": "cd backend && bun install",
+    "start": "cd backend && bun run src/server.ts"
   }
 }
