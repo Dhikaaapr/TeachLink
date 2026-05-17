@@ -1,17 +1,18 @@
 FROM oven/bun:1 as base
-
 WORKDIR /usr/src/app
 
-# Copy dependencies first
-COPY package.json bun.lockb ./
+# Copy dependencies first to leverage Docker cache
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-# Copy source
+# Copy the rest of the source code
 COPY . .
 
+# Set environment to production
 ENV NODE_ENV=production
 
-EXPOSE 3000
+# Expose port (Elysia usually listens on 3000)
+EXPOSE 3000/tcp
 
-# IMPORTANT: run file directly, NOT bun run
-CMD ["bun", "src/server.ts"]
+# Start the application
+CMD ["bun", "run", "src/server.ts"]

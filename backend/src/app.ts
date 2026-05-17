@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { node } from "@elysiajs/node";
 import { swagger } from "@elysiajs/swagger";
 import { jwt } from '@elysiajs/jwt';
 import { cors } from "@elysiajs/cors";
@@ -9,7 +10,7 @@ import { basicAuth } from "./plugins/basic-auth.plugin";
 import apiRoutes from "./api";
 import { uploadPlugin } from './plugins/upload.plugin'
 
-const app = new Elysia();
+const app = new Elysia({ adapter: node() });
 
 /* -------------------------------------------------------------------------- */
 /*         ❌ Global error handler (Harus inisialisasi di paling atas)        */
