@@ -83,7 +83,7 @@ const allowedOrigins = [
     "http://localhost:3005",
     "http://localhost:3000",
     "http://web2a.paramadina.ac.id",
-    "https://web2a.paramadina.ac.id"
+    "http://web2a.paramadina.ac.id/teachlink/"
 ];
 
 app.use(
