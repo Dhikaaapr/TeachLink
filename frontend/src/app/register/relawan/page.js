@@ -146,6 +146,13 @@ export default function RegisterRelawan() {
 
   const [provinces, setProvinces] = useState([]);
   const [kabupatens, setKabupatens] = useState([]);
+  
+  // Validation touch state
+  const [touched, setTouched] = useState({});
+
+  const handleBlur = (field) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -171,7 +178,51 @@ export default function RegisterRelawan() {
     }
   }, [form.id_provinsi]);
 
-  const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+  const update = (key, val) => {
+    setForm(prev => ({ ...prev, [key]: val }));
+    setTouched(prev => ({ ...prev, [key]: true }));
+  };
+
+  const isStep1Complete = 
+    form.name.trim() !== "" &&
+    form.email.trim() !== "" &&
+    form.password.length >= 8 &&
+    form.confirmPass.trim() !== "" &&
+    form.password === form.confirmPass;
+
+  const isStep2Complete =
+    form.phone.trim() !== "" &&
+    form.occupation !== "" &&
+    form.id_provinsi !== "" &&
+    form.id_kabupaten !== "";
+
+  const isStep3Complete = form.expertise.length > 0;
+
+  const isStep4Complete = form.selectedPeriode !== null;
+
+  const hasError = (field) => {
+    if (!touched[field]) return false;
+    switch (field) {
+      case "name":
+        return form.name.trim() === "";
+      case "email":
+        return form.email.trim() === "";
+      case "password":
+        return form.password.length < 8;
+      case "confirmPass":
+        return form.confirmPass.trim() === "" || form.password !== form.confirmPass;
+      case "phone":
+        return form.phone.trim() === "";
+      case "occupation":
+        return form.occupation === "";
+      case "id_provinsi":
+        return form.id_provinsi === "";
+      case "id_kabupaten":
+        return form.id_kabupaten === "";
+      default:
+        return false;
+    }
+  };
 
   const toggleExpertise = (exp) => {
     setForm(prev => ({
@@ -303,7 +354,7 @@ export default function RegisterRelawan() {
                 ⚠️ {error}
               </div>
             )}
-            {/* ══ STEP 1 — AKUN ══ */}
+             {/* ══ STEP 1 — AKUN ══ */}
             {step === 1 && (
               <div className={styles.stepContent}>
                 <div className={styles.formHeader}>
@@ -313,25 +364,69 @@ export default function RegisterRelawan() {
                 <div className={styles.fields}>
                   <div className={styles.field}>
                     <label>Nama Lengkap</label>
-                    <input type="text" placeholder="Masukkan nama lengkap" value={form.name} onChange={e => update("name", e.target.value)} required />
+                    <input
+                      type="text"
+                      placeholder="Masukkan nama lengkap"
+                      value={form.name}
+                      onChange={e => update("name", e.target.value)}
+                      onBlur={() => handleBlur("name")}
+                      className={hasError("name") ? styles.inputError : ""}
+                      required
+                    />
                   </div>
                   <div className={styles.field}>
                     <label>Email</label>
-                    <input type="email" placeholder="nama@email.com" value={form.email} onChange={e => update("email", e.target.value)} required />
+                    <input
+                      type="email"
+                      placeholder="nama@email.com"
+                      value={form.email}
+                      onChange={e => update("email", e.target.value)}
+                      onBlur={() => handleBlur("email")}
+                      className={hasError("email") ? styles.inputError : ""}
+                      required
+                    />
                   </div>
                   <div className={styles.fieldRow}>
                     <div className={styles.field}>
                       <label>Password</label>
-                      <input type="password" placeholder="Min. 8 karakter" value={form.password} onChange={e => update("password", e.target.value)} required minLength={8} />
+                      <input
+                        type="password"
+                        placeholder="Min. 8 karakter"
+                        value={form.password}
+                        onChange={e => update("password", e.target.value)}
+                        onBlur={() => handleBlur("password")}
+                        className={hasError("password") ? styles.inputError : ""}
+                        required
+                        minLength={8}
+                      />
+                      {touched.password && form.password.length < 8 && (
+                        <p style={{ color: "#E24B4A", fontSize: "11px", margin: "2px 0 0" }}>Password minimal 8 karakter</p>
+                      )}
                     </div>
                     <div className={styles.field}>
                       <label>Konfirmasi Password</label>
-                      <input type="password" placeholder="Ulangi password" value={form.confirmPass} onChange={e => update("confirmPass", e.target.value)} required />
+                      <input
+                        type="password"
+                        placeholder="Ulangi password"
+                        value={form.confirmPass}
+                        onChange={e => update("confirmPass", e.target.value)}
+                        onBlur={() => handleBlur("confirmPass")}
+                        className={hasError("confirmPass") ? styles.inputError : ""}
+                        required
+                      />
+                      {touched.confirmPass && form.password !== form.confirmPass && (
+                        <p style={{ color: "#E24B4A", fontSize: "11px", margin: "2px 0 0" }}>Password tidak cocok</p>
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className={styles.btnRow}>
-                  <button type="button" className={styles.nextBtn} onClick={() => setStep(2)}>
+                  <button
+                    type="button"
+                    className={styles.nextBtn}
+                    onClick={() => setStep(2)}
+                    disabled={!isStep1Complete}
+                  >
                     Lanjut <ArrowRight />
                   </button>
                 </div>
@@ -350,19 +445,33 @@ export default function RegisterRelawan() {
                   <div className={styles.fieldRow}>
                     <div className={styles.field}>
                       <label>No. Telepon</label>
-                      <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => update("phone", e.target.value)} required />
+                      <input
+                        type="tel"
+                        placeholder="08xxxxxxxxxx"
+                        value={form.phone}
+                        onChange={e => update("phone", e.target.value)}
+                        onBlur={() => handleBlur("phone")}
+                        className={hasError("phone") ? styles.inputError : ""}
+                        required
+                      />
                     </div>
                     <div className={styles.field}>
                       <label>Pekerjaan / Status</label>
-                    <select value={form.occupation} onChange={e => update("occupation", e.target.value)} required>
-                      <option value="">Pilih status</option>
-                      <option value="mahasiswa">Mahasiswa</option>
-                      <option value="fresh-grad">Fresh Graduate</option>
-                      <option value="profesional">Profesional</option>
-                      <option value="guru">Guru / Pengajar</option>
-                      <option value="lainnya">Lainnya</option>
-                    </select>
-                  </div>
+                      <select
+                        value={form.occupation}
+                        onChange={e => update("occupation", e.target.value)}
+                        onBlur={() => handleBlur("occupation")}
+                        className={hasError("occupation") ? styles.inputError : ""}
+                        required
+                      >
+                        <option value="">Pilih status</option>
+                        <option value="mahasiswa">Mahasiswa</option>
+                        <option value="fresh-grad">Fresh Graduate</option>
+                        <option value="profesional">Profesional</option>
+                        <option value="guru">Guru / Pengajar</option>
+                        <option value="lainnya">Lainnya</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className={styles.fieldRow}>
@@ -374,6 +483,8 @@ export default function RegisterRelawan() {
                           update("id_provinsi", e.target.value);
                           update("id_kabupaten", "");
                         }}
+                        onBlur={() => handleBlur("id_provinsi")}
+                        className={hasError("id_provinsi") ? styles.inputError : ""}
                         required
                       >
                         <option value="">Pilih Provinsi</option>
@@ -388,6 +499,8 @@ export default function RegisterRelawan() {
                       <select
                         value={form.id_kabupaten}
                         onChange={(e) => update("id_kabupaten", e.target.value)}
+                        onBlur={() => handleBlur("id_kabupaten")}
+                        className={hasError("id_kabupaten") ? styles.inputError : ""}
                         required
                         disabled={!form.id_provinsi}
                       >
@@ -400,12 +513,12 @@ export default function RegisterRelawan() {
                   </div>
 
                   <div className={styles.field}>
-                    <label>Institusi / Kampus</label>
+                    <label>Institusi / Kampus (opsional)</label>
                     <input type="text" placeholder="Contoh: Universitas Indonesia" value={form.institution} onChange={e => update("institution", e.target.value)} />
                   </div>
                   
                   <div className={styles.field}>
-                    <label>Upload KTP / KTM</label>
+                    <label>Upload KTP / KTM (opsional)</label>
                     <div className={styles.uploadArea}>
                       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                         <path d="M16 6v14M9 13l7-7 7 7M6 22h20" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -417,7 +530,14 @@ export default function RegisterRelawan() {
                 </div>
                 <div className={styles.btnRow}>
                   <button type="button" className={styles.backBtn} onClick={() => setStep(1)}><ArrowLeft /></button>
-                  <button type="button" className={styles.nextBtn} onClick={() => setStep(3)}>Lanjut <ArrowRight /></button>
+                  <button
+                    type="button"
+                    className={styles.nextBtn}
+                    onClick={() => setStep(3)}
+                    disabled={!isStep2Complete}
+                  >
+                    Lanjut <ArrowRight />
+                  </button>
                 </div>
               </div>
             )}
@@ -442,7 +562,7 @@ export default function RegisterRelawan() {
                   ))}
                 </div>
                 <div className={styles.field}>
-                  <label>Motivasi jadi relawan</label>
+                  <label>Motivasi jadi relawan (opsional)</label>
                   <textarea
                     placeholder="Ceritakan kenapa kamu ingin menjadi relawan pengajar..."
                     value={form.motivation} onChange={e => update("motivation", e.target.value)}
@@ -451,7 +571,14 @@ export default function RegisterRelawan() {
                 </div>
                 <div className={styles.btnRow} style={{ marginTop: "var(--space-6)" }}>
                   <button type="button" className={styles.backBtn} onClick={() => setStep(2)}><ArrowLeft /></button>
-                  <button type="button" className={styles.nextBtn} onClick={() => setStep(4)}>Lanjut <ArrowRight /></button>
+                  <button
+                    type="button"
+                    className={styles.nextBtn}
+                    onClick={() => setStep(4)}
+                    disabled={!isStep3Complete}
+                  >
+                    Lanjut <ArrowRight />
+                  </button>
                 </div>
               </div>
             )}
@@ -496,8 +623,8 @@ export default function RegisterRelawan() {
                             </div>
                             <div className={styles.periodeMeta}>
                               <span>{fmtDate(p.start)} — {fmtDate(p.end)}</span>
-                              {st === "open" && <span className={styles.quotaWarn}>{p.sisa} kuota tersisa</span>}
-                              {st === "soon" && <span>Dibuka mulai {fmtDate(p.start)}</span>}
+                           
+                              
                             </div>
                           </div>
                         </label>
@@ -519,22 +646,12 @@ export default function RegisterRelawan() {
                   </div>
                 )}
 
-                {/* Mode mengajar */}
-                <div className={styles.field}>
-                  <label>Mode mengajar yang diinginkan</label>
-                  <select value={form.mode} onChange={e => update("mode", e.target.value)} required>
-                    <option value="">Pilih mode</option>
-                    <option value="Online">Online</option>
-                    <option value="Offline">Offline</option>
-                    <option value="Online & Offline">Online & Offline</option>
-                  </select>
-                </div>
-
                 <div className={styles.btnRow} style={{ marginTop: "var(--space-6)" }}>
                   <button type="button" className={styles.backBtn} onClick={() => setStep(3)}><ArrowLeft /></button>
                   <button
-                    type="submit" className={styles.nextBtn}
-                    disabled={loading || !form.selectedPeriode}
+                    type="submit"
+                    className={styles.nextBtn}
+                    disabled={loading || !isStep4Complete}
                   >
                     {loading ? <span className={styles.spinner} /> : <>Daftar Sekarang 🚀</>}
                   </button>

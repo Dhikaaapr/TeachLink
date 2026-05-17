@@ -643,3 +643,14 @@
 .siswaPage .periodeOpt input[type="radio"] {
   accent-color: var(--teal-primary);
 }
+
+/* ── Validation Error Indicator ── */
+.inputError {
+  border-color: #E24B4A !important;
+  background-color: #FFF5F5 !important;
+}
+
+.inputError:focus {
+  border-color: #E24B4A !important;
+  box-shadow: 0 0 0 3px rgba(226, 75, 74, 0.1) !important;
+}

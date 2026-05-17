@@ -27,7 +27,7 @@ function parseDateSafe(dateStr) {
 
 function getSessionStatus(s) {
   if (!s) return "completed";
-  const isReal = !!s.id_kursus;
+  const isReal = !!s.id_kursus;   
   if (!isReal) return s.status || "completed";
 
   const baseDate = parseDateSafe(s.tanggal_mengajar);

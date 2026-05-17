@@ -73,6 +73,13 @@ export default function RegisterSiswa() {
 
   const [provinces, setProvinces] = useState([]);
   const [kabupatens, setKabupatens] = useState([]);
+  
+  // Validation touch state
+  const [touched, setTouched] = useState({});
+
+  const handleBlur = (field) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -98,7 +105,46 @@ export default function RegisterSiswa() {
     }
   }, [form.id_provinsi]);
 
-  const updateForm = (key, val) => setForm(prev => ({...prev, [key]: val}));
+  const updateForm = (key, val) => {
+    setForm(prev => ({...prev, [key]: val}));
+    setTouched(prev => ({...prev, [key]: true}));
+  };
+
+  const isStep1Complete = 
+    form.name.trim() !== "" &&
+    form.email.trim() !== "" &&
+    form.password.length >= 8 &&
+    form.confirmPass.trim() !== "" &&
+    form.password === form.confirmPass;
+
+  const isStep2Complete =
+    form.age.trim() !== "" &&
+    form.id_provinsi !== "" &&
+    form.id_kabupaten !== "";
+
+  const isStep3Complete = form.subjects.length > 0;
+
+  const hasError = (field) => {
+    if (!touched[field]) return false;
+    switch (field) {
+      case "name":
+        return form.name.trim() === "";
+      case "email":
+        return form.email.trim() === "";
+      case "password":
+        return form.password.length < 8;
+      case "confirmPass":
+        return form.confirmPass.trim() === "" || form.password !== form.confirmPass;
+      case "age":
+        return form.age.trim() === "";
+      case "id_provinsi":
+        return form.id_provinsi === "";
+      case "id_kabupaten":
+        return form.id_kabupaten === "";
+      default:
+        return false;
+    }
+  };
 
   const toggleSubject = (subj) => {
     setForm(prev => ({
@@ -189,22 +235,66 @@ export default function RegisterSiswa() {
                 <div className={styles.fields}>
                   <div className={styles.field}>
                     <label>Nama Lengkap</label>
-                    <input type="text" placeholder="Masukkan nama lengkap" value={form.name} onChange={e => updateForm("name", e.target.value)} required />
+                    <input
+                      type="text"
+                      placeholder="Masukkan nama lengkap"
+                      value={form.name}
+                      onChange={e => updateForm("name", e.target.value)}
+                      onBlur={() => handleBlur("name")}
+                      className={hasError("name") ? styles.inputError : ""}
+                      required
+                    />
                   </div>
                   <div className={styles.field}>
                     <label>Email</label>
-                    <input type="email" placeholder="nama@email.com" value={form.email} onChange={e => updateForm("email", e.target.value)} required />
+                    <input
+                      type="email"
+                      placeholder="nama@email.com"
+                      value={form.email}
+                      onChange={e => updateForm("email", e.target.value)}
+                      onBlur={() => handleBlur("email")}
+                      className={hasError("email") ? styles.inputError : ""}
+                      required
+                    />
                   </div>
                   <div className={styles.field}>
                     <label>Password</label>
-                    <input type="password" placeholder="Min. 8 karakter" value={form.password} onChange={e => updateForm("password", e.target.value)} required minLength={8} />
+                    <input
+                      type="password"
+                      placeholder="Min. 8 karakter"
+                      value={form.password}
+                      onChange={e => updateForm("password", e.target.value)}
+                      onBlur={() => handleBlur("password")}
+                      className={hasError("password") ? styles.inputError : ""}
+                      required
+                      minLength={8}
+                    />
+                    {touched.password && form.password.length < 8 && (
+                      <p style={{ color: "#E24B4A", fontSize: "11px", margin: "2px 0 0" }}>Password minimal 8 karakter</p>
+                    )}
                   </div>
                   <div className={styles.field}>
                     <label>Konfirmasi Password</label>
-                    <input type="password" placeholder="Masukkan ulang password" value={form.confirmPass} onChange={e => updateForm("confirmPass", e.target.value)} required />
+                    <input
+                      type="password"
+                      placeholder="Masukkan ulang password"
+                      value={form.confirmPass}
+                      onChange={e => updateForm("confirmPass", e.target.value)}
+                      onBlur={() => handleBlur("confirmPass")}
+                      className={hasError("confirmPass") ? styles.inputError : ""}
+                      required
+                    />
+                    {touched.confirmPass && form.password !== form.confirmPass && (
+                      <p style={{ color: "#E24B4A", fontSize: "11px", margin: "2px 0 0" }}>Password tidak cocok</p>
+                    )}
                   </div>
                 </div>
-                <button type="button" className={`btn btn-primary ${styles.nextBtn}`} onClick={() => setStep(2)}>
+                <button
+                  type="button"
+                  className={`btn btn-primary ${styles.nextBtn}`}
+                  onClick={() => setStep(2)}
+                  disabled={!isStep1Complete}
+                >
                   Lanjut
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
@@ -223,11 +313,23 @@ export default function RegisterSiswa() {
                   <div className={styles.fieldRow}>
                     <div className={styles.field}>
                       <label>Tanggal Lahir</label>
-                      <input type="date" value={form.age} onChange={e => updateForm("age", e.target.value)} required />
+                      <input
+                        type="date"
+                        value={form.age}
+                        onChange={e => updateForm("age", e.target.value)}
+                        onBlur={() => handleBlur("age")}
+                        className={hasError("age") ? styles.inputError : ""}
+                        required
+                      />
                     </div>
                     <div className={styles.field}>
-                      <label>No. Telepon</label>
-                      <input type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => updateForm("phone", e.target.value)} />
+                      <label>No. Telepon (opsional)</label>
+                      <input
+                        type="tel"
+                        placeholder="08xxxxxxxxxx"
+                        value={form.phone}
+                        onChange={e => updateForm("phone", e.target.value)}
+                      />
                     </div>
                   </div>
                   
@@ -241,6 +343,8 @@ export default function RegisterSiswa() {
                           updateForm("id_provinsi", id);
                           updateForm("id_kabupaten", "");
                         }}
+                        onBlur={() => handleBlur("id_provinsi")}
+                        className={hasError("id_provinsi") ? styles.inputError : ""}
                         required
                       >
                         <option value="">Pilih Provinsi</option>
@@ -255,6 +359,8 @@ export default function RegisterSiswa() {
                       <select
                         value={form.id_kabupaten}
                         onChange={(e) => updateForm("id_kabupaten", e.target.value)}
+                        onBlur={() => handleBlur("id_kabupaten")}
+                        className={hasError("id_kabupaten") ? styles.inputError : ""}
                         required
                         disabled={!form.id_provinsi}
                       >
@@ -274,7 +380,12 @@ export default function RegisterSiswa() {
 
                 <div className={styles.btnRow}>
                   <button type="button" className={`btn btn-outline ${styles.backBtn}`} onClick={() => setStep(1)}>Kembali</button>
-                  <button type="button" className={`btn btn-primary ${styles.nextBtn}`} onClick={() => setStep(3)}>
+                  <button
+                    type="button"
+                    className={`btn btn-primary ${styles.nextBtn}`}
+                    onClick={() => setStep(3)}
+                    disabled={!isStep2Complete}
+                  >
                     Lanjut
                     <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
@@ -310,7 +421,7 @@ export default function RegisterSiswa() {
                 </div>
                 <div className={styles.btnRow}>
                   <button type="button" className={`btn btn-outline ${styles.backBtn}`} onClick={() => setStep(2)}>Kembali</button>
-                  <button type="submit" className={`btn btn-primary ${styles.nextBtn}`} disabled={loading}>
+                  <button type="submit" className={`btn btn-primary ${styles.nextBtn}`} disabled={loading || !isStep3Complete}>
                     {loading ? <span className={styles.spinner}></span> : "Daftar Sekarang  🎉"}
                   </button>
                 </div>

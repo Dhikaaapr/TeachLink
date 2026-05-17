@@ -19,10 +19,7 @@ const MAPEL_COLOR = {
 };
 
 /* ─────────────── DATA MOCK ─────────────── */
-const CERT_DATA = [
-  { mapel:'Matematika', level:'SMA', siswa:8, rating:4.9, status:'done',     periode:'Apr–Okt 2025', from:'#D85A30', to:'#F0997B' },
-  { mapel:'Fisika',     level:'SMA', siswa:4, rating:4.8, status:'progress', bulan:2, total:6, mulai:'Feb 2026', target:'Agt 2026', from:'#1D9E75', to:'#5DCAA5' },
-];
+// (CERT_DATA is now defined dynamically inside the component)
 
 /* ─────────────── HELPERS ─────────────── */
 function getInitials(name) {
@@ -311,6 +308,115 @@ export default function DashboardRelawan() {
   const [editData, setEditData]     = useState(null);
   const [formLoading, setFormLoading] = useState(false);
 
+  // Certificate Modal & Download State
+  const [selectedCert, setSelectedCert] = useState(null);
+  const [certDownloading, setCertDownloading] = useState(false);
+
+  /* ── Filter Jadwal Sesi Aktif Yang Belum Selesai (Mendatang / Sedang Berlangsung) ── */
+  const upcomingSessions = useMemo(() => {
+    return realKursusCreated.filter(k => {
+      if (!k.full_name) return false;
+      if (!k.tanggal_mengajar || !k.waktu_selesai) return true;
+      
+      const scheduleDate = new Date(k.tanggal_mengajar);
+      const [hour, minute] = k.waktu_selesai.split(':').map(Number);
+      const classEnd = new Date(
+        scheduleDate.getFullYear(),
+        scheduleDate.getMonth(),
+        scheduleDate.getDate(),
+        hour,
+        minute,
+        0,
+        0
+      );
+      
+      return classEnd >= new Date();
+    });
+  }, [realKursusCreated]);
+
+  /* ── Filter Jadwal Sesi Mengajar Yang Sudah Selesai (Riwayat Mengajar) ── */
+  const pastSessions = useMemo(() => {
+    return realKursusCreated.filter(k => {
+      if (!k.full_name) return false;
+      if (!k.tanggal_mengajar || !k.waktu_selesai) return false;
+      
+      const scheduleDate = new Date(k.tanggal_mengajar);
+      const [hour, minute] = k.waktu_selesai.split(':').map(Number);
+      const classEnd = new Date(
+        scheduleDate.getFullYear(),
+        scheduleDate.getMonth(),
+        scheduleDate.getDate(),
+        hour,
+        minute,
+        0,
+        0
+      );
+      
+      return classEnd < new Date();
+    });
+  }, [realKursusCreated]);
+
+  // Dynamic Certificate Data based on teaching progress 
+  const CERT_DATA = useMemo(() => {
+    const taughtCount = pastSessions.length;
+    const targetCount = 15;
+    const isDone = taughtCount >= targetCount;
+    
+    return [
+      {
+        mapel: 'Sertifikat penghargaan ini diberikan kepada relawan sebagai bentuk apresiasi atas dedikasi, semangat, dan kerja keras dalam mengajar serta berbagi ilmu.',
+        level: 'Relawan',
+        status: isDone ? 'done' : 'progress',
+        periode: 'Semester Genap 2025/2026',
+        from: '#D85A30',
+        to: '#F0997B',
+        current: taughtCount,
+        target: targetCount
+      }
+    ];
+  }, [pastSessions]);
+
+  const handleDownloadCert = (certName, periodText) => {
+    setCertDownloading(true);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = "/sertifikat (1).png";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      
+      // Draw background
+      ctx.drawImage(img, 0, 0);
+      
+      // Setup Text
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      // 1. Volunteer Name overlay (Big and elegant, dark forest green branding)
+      ctx.fillStyle = "#0A4334";
+      ctx.font = `bold ${Math.round(canvas.height * 0.052)}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.fillText(certName, canvas.width / 2, canvas.height * 0.43);
+      
+      // 2. Period overlay (Positioned perfectly below the green "PERIODE" pill in the template)
+      ctx.fillStyle = "#1A202C";
+      ctx.font = `bold ${Math.round(canvas.height * 0.027)}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.fillText(periodText, canvas.width / 2, canvas.height * 0.735);
+      
+      // Trigger browser download
+      const link = document.createElement("a");
+      link.download = `Sertifikat_TemanBelajar_${certName.replace(/\s+/g, "_")}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      setCertDownloading(false);
+    };
+    img.onerror = () => {
+      alert("Gagal memuat template sertifikat. Pastikan file /sertifikat (1).png tersedia di folder public.");
+      setCertDownloading(false);
+    };
+  };
+
   /* ── Fetch requests ── */
   useEffect(() => {
     if (user?.user_id) {
@@ -404,14 +510,29 @@ export default function DashboardRelawan() {
       if (!s.tanggal_mengajar) return false;
       const scheduleDate = new Date(s.tanggal_mengajar);
       const scheduleDateStr = `${scheduleDate.getFullYear()}-${String(scheduleDate.getMonth() + 1).padStart(2, '0')}-${String(scheduleDate.getDate()).padStart(2, '0')}`;
-      return scheduleDateStr === todayStr;
+      if (scheduleDateStr !== todayStr) return false;
+
+      // 3. Harus belum melewati waktu selesai mengajar
+      if (!s.waktu_selesai) return true;
+      const [hour, minute] = s.waktu_selesai.split(':').map(Number);
+      const classEnd = new Date(
+        scheduleDate.getFullYear(),
+        scheduleDate.getMonth(),
+        scheduleDate.getDate(),
+        hour,
+        minute,
+        0,
+        0
+      );
+
+      return classEnd >= today;
     });
   }, [realKursusCreated]);
 
   /* ── Filter Jumlah Siswa Aktif Unik ── */
   const activeSiswaCount = useMemo(() => {
-    return realKursusCreated.filter(k => k.full_name).length;
-  }, [realKursusCreated]);
+    return upcomingSessions.length;
+  }, [upcomingSessions]);
 
   /* ── CRUD handlers ── */
   async function handleSubmitJadwal(formData) {
@@ -519,6 +640,7 @@ export default function DashboardRelawan() {
     { id:'requests', label:'Permintaan', badge: realRequests.length },
     { id:'schedule', label:'Jadwal' },
     { id:'settings', label:'Kursus' },
+    { id:'history',  label:'Riwayat Mengajar' },
     { id:'cert',     label:'Sertifikat' }
   ];
 
@@ -738,7 +860,7 @@ export default function DashboardRelawan() {
               <header className={styles.topBar}>
                 <div>
                   <h1 className={styles.pageTitle}>Jadwal Mengajar</h1>
-                  <p className={styles.pageDesc}>{realKursusCreated.filter(k => k.full_name).length} sesi aktif · Kelola sesi mengajarmu yang telah dipesan siswa</p>
+                  <p className={styles.pageDesc}>{upcomingSessions.length} sesi aktif · Kelola sesi mengajarmu yang telah dipesan siswa</p>
                 </div>
                 <div style={{ display:'flex', gap:10, alignItems:'center' }}>
                   <button className={styles.btnCoral} onClick={openAddModal}>+ Tambah Jadwal</button>
@@ -751,16 +873,16 @@ export default function DashboardRelawan() {
                     Jadwal Kamu
                   </p>
                   <span style={{ fontSize: 10, background: 'var(--teal-light)', color: 'var(--teal-dark)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                    {realKursusCreated.filter(k => k.full_name).length} Sesi Aktif
+                    {upcomingSessions.length} Sesi Aktif
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {realKursusCreated.filter(k => k.full_name).length === 0 ? (
+                  {upcomingSessions.length === 0 ? (
                     <div className={styles.empty} style={{ padding: '24px', borderRadius: '12px', border: '1px dashed var(--gray-200)', background: 'var(--gray-50)', color: 'var(--gray-400)', textAlign: 'center', fontSize: '13px' }}>
                       ✨ Belum ada jadwal yang dipesan oleh murid. Tunggu request masuk di tab Permintaan!
                     </div>
                   ) : (
-                    realKursusCreated.filter(k => k.full_name).map(k => {
+                    upcomingSessions.map(k => {
                       const mapelObj = pelajaranOptions.find(m => m.id === k.id_pelajaran) || pelajaranOptions[0] || { label: k.nama_pelajaran || 'Pelajaran', icon: '📖' };
                       const clr = MAPEL_COLOR[k.id_pelajaran] || MAPEL_COLOR[1];
                       const dur = getDurMins(k.waktu_mulai?.slice(0,5), k.waktu_selesai?.slice(0,5));
@@ -805,13 +927,72 @@ export default function DashboardRelawan() {
             </div>
           )}
 
+          {/* ══ RIWAYAT MENGAJAR ══ */}
+          {tab === 'history' && (
+            <div className={styles.pane}>
+              <header className={styles.topBar}>
+                <div>
+                  <h1 className={styles.pageTitle}>Riwayat Mengajar</h1>
+                  <p className={styles.pageDesc}>{pastSessions.length} sesi mengajar telah diselesaikan secara luar biasa! 🌟</p>
+                </div>
+              </header>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                    Sesi Terselesaikan
+                  </p>
+                  <span style={{ fontSize: 10, background: 'var(--teal-light)', color: 'var(--teal-dark)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                    {pastSessions.length} Selesai
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pastSessions.length === 0 ? (
+                    <div className={styles.empty} style={{ padding: '32px', borderRadius: '12px', border: '1px dashed var(--gray-200)', background: 'var(--gray-50)', color: 'var(--gray-400)', textAlign: 'center', fontSize: '13px' }}>
+                      🎓 Belum ada riwayat sesi mengajar yang selesai. Selesaikan sesi pertamamu untuk melacaknya di sini!
+                    </div>
+                  ) : (
+                    pastSessions.map(k => {
+                      const mapelObj = pelajaranOptions.find(m => m.id === k.id_pelajaran) || pelajaranOptions[0] || { label: k.nama_pelajaran || 'Pelajaran', icon: '📖' };
+                      const clr = MAPEL_COLOR[k.id_pelajaran] || MAPEL_COLOR[1];
+                      const dur = getDurMins(k.waktu_mulai?.slice(0,5), k.waktu_selesai?.slice(0,5));
+                      return (
+                        <div key={k.id_kursus} className={styles.jadwalItemCard} style={{ opacity: 0.9 }}>
+                          <div className={styles.jadwalItemIcon} style={{ background: 'var(--gray-100)', color: 'var(--gray-500)' }}>
+                            <span style={{ fontSize: 16 }}>{mapelObj.icon}</span>
+                          </div>
+                          <div className={styles.jadwalItemInfo}>
+                            <p className={styles.jadwalItemMapel} style={{ color: 'var(--gray-600)' }}>
+                              {k.nama_pelajaran || mapelObj.label} - <span style={{ color: 'var(--gray-500)', fontWeight: 600 }}>{k.full_name}</span>
+                            </p>
+                            <p className={styles.jadwalItemMeta}>
+                              📅 {new Date(k.tanggal_mengajar).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' })}
+                              {' · '}<span>⏰</span> {k.waktu_mulai?.slice(0,5)}–{k.waktu_selesai?.slice(0,5)} WIB
+                              {dur > 0 && ` (${fmtDur(dur)})`}
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: 8 }}>
+                            <span style={{ fontSize: 11, background: 'var(--teal-light)', color: 'var(--teal-dark)', padding: '4px 10px', borderRadius: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span>✓</span> Selesai
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ══ SERTIFIKAT ══ */}
           {tab === 'cert' && (
             <div className={styles.pane}>
               <header className={styles.topBar}>
                 <div>
                   <h1 className={styles.pageTitle}>Sertifikat Relawan</h1>
-                  <p className={styles.pageDesc}>Diterbitkan setelah 6 bulan mengajar per mapel</p>
+                  <p className={styles.pageDesc}>Diterbitkan setelah mengajar minimal 15 siswa per periode pendaftaran</p>
                 </div>
               </header>
               <div className={styles.certPage}>
@@ -820,7 +1001,7 @@ export default function DashboardRelawan() {
                     <div className={styles.certBanner} style={{ background:`linear-gradient(135deg,${c.from},${c.to})` }}>
                       <div>
                         <p className={styles.certBannerTitle}>{c.mapel}</p>
-                        <p className={styles.certBannerSub}>{c.level} — Relawan Pengajar</p>
+
                       </div>
                       <div className={styles.certSeal}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -829,34 +1010,55 @@ export default function DashboardRelawan() {
                       </div>
                     </div>
                     <div className={styles.certBody}>
-                      <p className={styles.certMapel}>{c.mapel} — {c.level}</p>
-                      <div className={styles.certStats}>
-                        <div className={styles.certStat}><p className={styles.csv}>{c.siswa}</p><p className={styles.csl}>Siswa Dibantu</p></div>
-                        <div className={styles.certStat}><p className={styles.csv}>{c.rating}</p><p className={styles.csl}>Rating</p></div>
-                      </div>
+                     
+                      
                       {c.status === 'done' ? (
                         <>
                           <div className={`${styles.certStatus} ${styles.csDone}`}>
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4 10l4.5 4.5L16 6" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             <div>
-                              <p className={styles.csText} style={{ color:'var(--teal)' }}>Sertifikat Siap Diunduh</p>
-                              <p className={styles.csDesc}>Selesai 6 bulan — {c.periode}</p>
+                              <p className={styles.csText} style={{ color:'var(--teal)' }}>Sertifikat Siap Diunduh! 🎓</p>
+                              <p className={styles.csDesc}>Telah mengajar {c.current} siswa — {c.periode}</p>
                             </div>
                           </div>
-                          <div style={{ marginTop:10 }}><button className={styles.btnCoral}>Download PDF</button></div>
+                          <div style={{ marginTop:12 }}>
+                            <button className={styles.btnCoral} onClick={() => setSelectedCert(c)}>
+                              Lihat & Cetak Sertifikat 🎓
+                            </button>
+                          </div>
                         </>
                       ) : (
                         <>
                           <div className={`${styles.certStatus} ${styles.csProg}`}>
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="#BA7517" strokeWidth="1.5"/><path d="M10 6.667V10l2.5 1.667" stroke="#BA7517" strokeWidth="1.5" strokeLinecap="round"/></svg>
                             <div>
-                              <p className={styles.csText} style={{ color:'var(--amber)' }}>Dalam Proses — {c.total - c.bulan} bulan lagi</p>
-                              <p className={styles.csDesc}>Mulai {c.mulai} — Target {c.target}</p>
+                              <p className={styles.csText} style={{ color:'var(--amber)' }}>Dalam Proses — Kurang {c.target - c.current} siswa lagi</p>
+                              <p className={styles.csDesc}>Target: mengajar minimal {c.target} siswa per periode</p>
                             </div>
                           </div>
-                          <div style={{ marginTop:10 }}>
-                            <div className={styles.certProgLabel}><span>Progres waktu</span><span>{c.bulan}/{c.total} bulan</span></div>
-                            <div className={styles.progBar}><div className={styles.progFill} style={{ width:`${Math.round(c.bulan/c.total*100)}%`, background:'var(--amber)' }}/></div>
+                          <div style={{ marginTop:12 }}>
+                            <div className={styles.certProgLabel}>
+                              <span>Progres Mengajar</span>
+                              <span>{c.current} / {c.target} siswa</span>
+                            </div>
+                            <div className={styles.progBar}>
+                              <div 
+                                className={styles.progFill} 
+                                style={{ 
+                                  width: `${Math.round((c.current / c.target) * 100)}%`, 
+                                  background: 'var(--amber)' 
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div style={{ marginTop:12 }}>
+                            <button 
+                              className={styles.btnOutline} 
+                              style={{ width: '100%', cursor: 'not-allowed', opacity: 0.7, color: 'var(--gray-500)', borderColor: 'var(--gray-200)', background: 'var(--gray-50)' }} 
+                              disabled
+                            >
+                              Belum Memenuhi Target (Minimal 15 Siswa) 🔒
+                            </button>
                           </div>
                         </>
                       )}
@@ -955,6 +1157,50 @@ export default function DashboardRelawan() {
           mapelOptions={pelajaranOptions}
         />
 
+        {/* ─── CERTIFICATE PREVIEW MODAL ─── */}
+        {selectedCert && (
+          <div className={styles.certPreviewOverlay} onClick={() => setSelectedCert(null)}>
+            <div className={styles.certPreviewModal} onClick={e => e.stopPropagation()}>
+              <div className={styles.certPreviewHead}>
+                <h2 className={styles.certPreviewTitle}>Pratinjau Sertifikat Penghargaan</h2>
+                <button className={styles.modalClose} onClick={() => setSelectedCert(null)} aria-label="Tutup">✕</button>
+              </div>
+              <div className={styles.certPreviewBody}>
+                <div className={styles.certContainer}>
+                  <img
+                    src="/sertifikat (1).png"
+                    alt="Template Sertifikat Canva"
+                    className={styles.certTemplateImg}
+                  />
+                  <div className={styles.certOverlayName}>
+                    {user?.full_name || "Kak Relawan"}
+                  </div>
+                  <div className={styles.certOverlayPeriod}>
+                    {selectedCert.periode}
+                  </div>
+                </div>
+              </div>
+              <div className={styles.certPreviewFoot}>
+                <button
+                  type="button"
+                  className={styles.btnOutline}
+                  onClick={() => setSelectedCert(null)}
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  className={styles.btnCoral}
+                  onClick={() => handleDownloadCert(user?.full_name || "Kak Relawan", selectedCert.periode)}
+                  disabled={certDownloading}
+                >
+                  {certDownloading ? "Mengunduh..." : "Unduh Sertifikat (PNG) 📥"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </ProtectedRoute>
   );
@@ -981,6 +1227,7 @@ function NavIcon({ id }) {
   if (id==='requests') return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M17.5 12.5a1.667 1.667 0 01-1.667 1.667h-10L2.5 17.5V5.833A1.667 1.667 0 014.167 4.167h11.666A1.667 1.667 0 0117.5 5.833V12.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   if (id==='students') return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.5"/><path d="M3 17.5c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   if (id==='schedule') return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="2.5" y="3.333" width="15" height="14.167" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M13.333 1.667v3.333M6.667 1.667v3.333M2.5 8.333h15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
+  if (id==='history')  return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 5v5l3.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   if (id==='cert')     return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 12.5l-3.5 5 1-3.5-3-1.5L10 12.5zm0 0l3.5 5-1-3.5 3-1.5L10 12.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><circle cx="10" cy="7.5" r="5" stroke="currentColor" strokeWidth="1.5"/></svg>;
   if (id==='settings') return <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.2 4.2l1.4 1.4M14.4 14.4l1.4 1.4M4.2 15.8l1.4-1.4M14.4 5.6l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
   return null;
