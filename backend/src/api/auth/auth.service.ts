@@ -30,6 +30,7 @@ export async function loginUser(email: string, password: string) {
             full_name: user.full_name,
             email: user.email,
             id_role: user.id_role,
+            role: user.role,
         },
         message: "Login success",
     };
